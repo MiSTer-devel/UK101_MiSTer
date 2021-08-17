@@ -13,6 +13,6 @@ set_global_assignment -name VHDL_FILE UK101/UK101/CegmonRom.VHD
 set_global_assignment -name QIP_FILE UK101/UK101/ProgRam.qip
 set_global_assignment -name QIP_FILE UK101/UK101/DisplayRam.qip
 set_global_assignment -name QIP_FILE UK101/UK101/BasicRom.qip
-set_global_assignment -name SYSTEMVERILOG_FILE UK101_Mister.sv
+set_global_assignment -name SYSTEMVERILOG_FILE UK101.sv
 set_global_assignment -name CDF_FILE jtag.cdf
 set_global_assignment -name QIP_FILE sys/sys.qip

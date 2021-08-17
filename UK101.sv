@@ -3,7 +3,19 @@
 //  Based on Grant Searle's original FPGA project http://searle.x10host.com/uk101FPGA/
 //  Ported by Daniel Baum, August 2021.
 //
+//  This program is free software; you can redistribute it and/or modify it
+//  under the terms of the GNU General Public License as published by the Free
+//  Software Foundation; either version 2 of the License, or (at your option)
+//  any later version.
 //
+//  This program is distributed in the hope that it will be useful, but WITHOUT
+//  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+//  FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+//  more details.
+//
+//  You should have received a copy of the GNU General Public License along
+//  with this program; if not, write to the Free Software Foundation, Inc.,
+//  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 //============================================================================
 
 module emu
@@ -196,7 +208,7 @@ assign LED_USER  = 1;
 
 `include "build_id.v"
 localparam CONF_STR = {
-	"Compukit UK101;;",
+	"UK101;;",
 	"-;",
 	"O89,Aspect ratio,Original,Full Screen,[ARC1],[ARC2];",
 	"O34,Colours,White on blue,White on black,Green on black,Yellow on black;",

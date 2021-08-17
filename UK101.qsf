@@ -24,7 +24,7 @@
 # -------------------------------------------------------------------------- #
 
 set_global_assignment -name ORIGINAL_QUARTUS_VERSION 17.0.2
-set_global_assignment -name PROJECT_CREATION_TIME_DATE "22:08:47  JULY 28, 2021"
+set_global_assignment -name PROJECT_CREATION_TIME_DATE "18:34:17  AUGUST 16, 2021"
 # --------------------------------------------------------------------------
 #
 # MiSTer project
