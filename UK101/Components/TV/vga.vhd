@@ -24,6 +24,8 @@ entity vga is
 		hblank		:	out std_logic;
 		vblank		:	out std_logic;
 		colours		:	in std_logic_vector(1 downto 0);
+		resolution	: in std_logic;
+		monitor_type	: in std_logic;
 		r				:	out std_logic;
 		g				:	out std_logic;
 		b				:	out std_logic
@@ -88,7 +90,7 @@ constant v_Back_porch   : integer:=33;
 constant v_Whole_frame  : integer:=525;
 --Scaler Adjustment
 constant scaler_width	: integer:=102;
-constant scaler_height	: integer:=70;
+signal scaler_height	: integer:=70;
 
 --------------------------------------------------------------------------------------
 --   640x480 - (Non Standard 512x480 stretched pixel timing) - USE a 25MHz Pixel Clock
@@ -172,6 +174,10 @@ signal hcount_d9,hcount_d10,hcount_d11				: unsigned(10 downto 0):="00000000000"
 signal hcount_d12,hcount_d13							: unsigned(10 downto 0):="00000000000";
 
 begin
+
+scaler_height <= 	70 when resolution = '0' else 
+						35 when resolution = '1' and monitor_type='0' else
+						35 when resolution = '1' and monitor_type='1';
 
 ---------------------------------------------------------
 --                                                     --

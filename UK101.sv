@@ -55,35 +55,6 @@ module emu
 	input  [11:0] HDMI_WIDTH,
 	input  [11:0] HDMI_HEIGHT,
 	output        HDMI_FREEZE,
-//
-//`ifdef MISTER_FB
-//	// Use framebuffer in DDRAM (USE_FB=1 in qsf)
-//	// FB_FORMAT:
-//	//    [2:0] : 011=8bpp(palette) 100=16bpp 101=24bpp 110=32bpp
-//	//    [3]   : 0=16bits 565 1=16bits 1555
-//	//    [4]   : 0=RGB  1=BGR (for 16/24/32 modes)
-//	//
-//	// FB_STRIDE either 0 (rounded to 256 bytes) or multiple of pixel size (in bytes)
-//	output        FB_EN,
-//	output  [4:0] FB_FORMAT,
-//	output [11:0] FB_WIDTH,
-//	output [11:0] FB_HEIGHT,
-//	output [31:0] FB_BASE,
-//	output [13:0] FB_STRIDE,
-//	input         FB_VBL,
-//	input         FB_LL,
-//	output        FB_FORCE_BLANK,
-//
-//`ifdef MISTER_FB_PALETTE
-//	// Palette control for 8bit modes.
-//	// Ignored for other video modes.
-//	output        FB_PAL_CLK,
-//	output  [7:0] FB_PAL_ADDR,
-//	output [23:0] FB_PAL_DOUT,
-//	input  [23:0] FB_PAL_DIN,
-//	output        FB_PAL_WR,
-//`endif
-//`endif
 
 	output        LED_USER,  // 1 - ON, 0 - OFF.
 
@@ -161,11 +132,6 @@ module emu
 	output        UART_DTR,
 	input         UART_DSR,
 
-	// Open-drain User port.
-	// 0 - D+/RX
-	// 1 - D-/TX
-	// 2..6 - USR2..USR6
-	// Set USER_OUT to 1 to read from USER_IN.
 	input   [6:0] USER_IN,
 	output  [6:0] USER_OUT,
 
@@ -212,6 +178,8 @@ localparam CONF_STR = {
 	"-;",
 	"O89,Aspect ratio,Original,Full Screen,[ARC1],[ARC2];",
 	"O34,Colours,White on blue,White on black,Green on black,Yellow on black;",
+	"D0O55,Screen size,64x32,48x16;",
+	"O66,Monitor Type,Cegmon,NewMon;",
 	"RA,Reset;",
 	"-;",
 	"-;",
@@ -228,6 +196,9 @@ wire [31:0] status;
 wire PS2_CLK;
 wire PS2_DAT;
 wire [1:0] colour_scheme = status[4:3];
+wire resolution;
+wire monitor_type=status[6];
+assign resolution = monitor_type ? 1 : status[5];
 wire forced_scandoubler;
 
 
@@ -240,7 +211,8 @@ hps_io #(.CONF_STR(CONF_STR),.PS2DIV(2000)) hps_io
 	.status(status),
 	.ps2_kbd_clk_out(PS2_CLK),
 	.ps2_kbd_data_out(PS2_DAT),
-	.forced_scandoubler(forced_scandoubler)
+	.forced_scandoubler(forced_scandoubler),
+	.status_menumask({status[6]})
 
 
 );
@@ -286,6 +258,8 @@ uk101 uk101
 	.g(g),
 	.b(b),
 	.colours(colour_scheme),
+	.resolution(resolution),
+	.monitor_type(monitor_type),
 	.rxd(UART_RXD),
 	.txd(UART_TXD),
 	.rts(UART_RTS)
