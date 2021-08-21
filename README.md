@@ -4,7 +4,7 @@ Port by [danielb0](https://github.com/danielb0)
 
 ## Description
 
-This core is a port of [Grant Searle's UK101 project](http://searle.x10host.com/uk101FPGA/index.html) to MiSTer FPGA. It is a reconstruction of a kit computer from the late 1970s, which was based on a 6502 processor that ran at 1 MHz and originally came equipped with 8Kb of RAM.
+This core is a port of [Grant Searle's UK101 FPGA project](http://searle.x10host.com/uk101FPGA/index.html) to MiSTer FPGA. It is a reconstruction of a kit computer from the late 1970s, which was based on a 6502 processor that ran at 1 MHz and originally came equipped with 8Kb of RAM.
 
 This core includes some enhancements which Grant added to his own project such as the 64x32 display and a 32Kb RAM expansion.
 
@@ -12,7 +12,7 @@ Saving and loading of Basic programs can be done via the UART, at 9600 baud. Ins
 
 ### Original sources
 
-[Grant Searle's original site](http://searle.x10host.com/uk101FPGA/index.html)
+[Grant Searle's original UK101 FPGA site](http://searle.x10host.com/uk101FPGA/index.html)
 
 [VGA interface by Cray Ze Ape](https://github.com/douggilliland/MultiComp/tree/master/MultiComp%20(VHDL%20Template)/Components/VGA/VGA_CraZeApe)
 
