@@ -26,5 +26,6 @@ Use of the contents of any file within your own projects is permitted freely, bu
 Any file published or distributed that contains all or part of any file from this page must be made available free of charge.
 ```
 #### Cray Ze Ape's license:
-
-`Unrestricted release - do with it as you see fit.`
+```
+Unrestricted release - do with it as you see fit.
+```
