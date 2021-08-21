@@ -179,7 +179,7 @@ localparam CONF_STR = {
 	"O89,Aspect ratio,Original,Full Screen,[ARC1],[ARC2];",
 	"O34,Colours,White on blue,White on black,Green on black,Yellow on black;",
 	"D0O55,Screen size,64x32,48x16;",
-	"O66,Monitor Type,Cegmon,NewMon;",
+	"O66,Monitor,Cegmon,MonUK02(NewMon);",
 	"RA,Reset;",
 	"-;",
 	"-;",
