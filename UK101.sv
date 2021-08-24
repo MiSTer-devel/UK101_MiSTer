@@ -180,6 +180,7 @@ localparam CONF_STR = {
 	"O34,Colours,White on blue,White on black,Green on black,Yellow on black;",
 	"D0O55,Screen size,64x32,48x16;",
 	"O66,Monitor,Cegmon,MonUK02(NewMon);",
+	"O77,Baud Rate,9600,300;",
 	"RA,Reset;",
 	"-;",
 	"-;",
@@ -198,6 +199,7 @@ wire PS2_DAT;
 wire [1:0] colour_scheme = status[4:3];
 wire resolution;
 wire monitor_type=status[6];
+wire baud_rate=status[7];
 assign resolution = monitor_type ? 1 : status[5];
 wire forced_scandoubler;
 
@@ -260,6 +262,7 @@ uk101 uk101
 	.colours(colour_scheme),
 	.resolution(resolution),
 	.monitor_type(monitor_type),
+	.baud_rate(baud_rate),
 	.rxd(UART_RXD),
 	.txd(UART_TXD),
 	.rts(UART_RTS)

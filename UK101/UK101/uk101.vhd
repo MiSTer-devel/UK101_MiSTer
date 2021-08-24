@@ -36,6 +36,7 @@ entity uk101 is
 		resolution	:	in std_logic;
 		colours		:	in std_logic_vector(1 downto 0);
 		monitor_type : in std_logic;
+		baud_rate : in std_logic;
 		hblank		:	out std_logic;
 		vblank		:	out std_logic;
 		ps2Clk		: in std_logic;
@@ -78,8 +79,22 @@ architecture struct of uk101 is
 	signal kbReadData 	: std_logic_vector(7 downto 0);
 	signal kbRowSel 		: std_logic_vector(7 downto 0);
 	--signal video_clock		: std_ulogic;
+	
+	--serial clock count thresholds
+	constant c_9600BaudClkCount1 : integer:=325;
+	constant c_9600BaudClkCount2 : integer:=162;
+	constant c_300BaudClkCount1 : integer:=10416;
+	constant c_300BaudClkCount2 : integer:=5208;
+	
+	signal serialClkCount1: integer := 0;
+	signal serialClkCount2: integer := 0;
+	
+
 
 begin
+
+	serialClkCount1 <= c_9600BaudClkCount1 when baud_rate = '0' else c_300BaudClkCount1;
+	serialClkCount2 <= c_9600BaudClkCount2 when baud_rate = '0' else c_300BaudClkCount2;
 
 	n_memWR <= not(cpuClock) nand (not n_WR);
 
@@ -193,14 +208,13 @@ begin
 				cpuClock <= '1';
 			end if;	
 			
---			if serialClkCount < 10416 then -- 300 baud
-			if serialClkCount < 325 then -- 9600 baud
+			if serialClkCount < serialClkCount1 then
 				serialClkCount <= serialClkCount + 1;
 			else
 				serialClkCount <= (others => '0');
 			end if;
---			if serialClkCount < 5208 then -- 300 baud
-			if serialClkCount < 162 then -- 9600 baud
+
+			if serialClkCount < serialClkCount2 then 
 				serialClock <= '0';
 			else
 				serialClock <= '1';
