@@ -38,9 +38,9 @@ module emu
 	output        CE_PIXEL,
 
 	//Video aspect ratio for HDMI. Most retro systems have ratio 4:3.
-	//if VIDEO_ARX[12] or VIDEO_ARY[12] is set then [11:0] contains scaled size instead of aspect ratio.
-	output [7:0] VIDEO_ARX,
-	output [7:0] VIDEO_ARY,
+	//if VIDEO_[12] or VIDEO_ARY[12] is set then [11:0] contains scaled size instead of aspect ratio.
+	output [12:0] VIDEO_ARX,
+	output [12:0] VIDEO_ARY,
 
 	output  [7:0] VGA_R,
 	output  [7:0] VGA_G,
@@ -147,8 +147,8 @@ assign {SD_SCK, SD_MOSI, SD_CS} = 'Z;
 assign {SDRAM_DQ, SDRAM_A, SDRAM_BA, SDRAM_CLK, SDRAM_CKE, SDRAM_DQML, SDRAM_DQMH, SDRAM_nWE, SDRAM_nCAS, SDRAM_nRAS, SDRAM_nCS} = 'Z;
 assign {DDRAM_CLK, DDRAM_BURSTCNT, DDRAM_ADDR, DDRAM_DIN, DDRAM_BE, DDRAM_RD, DDRAM_WE} = '0;  
 
-assign VGA_SL = 0;
-assign VGA_F1 = 0;
+//assign VGA_SL = 0;
+//assign VGA_F1 = 0;
 assign VGA_SCALER = 0;
 assign HDMI_FREEZE = 0;
 
@@ -164,10 +164,6 @@ assign BUTTONS = 0;
 //////////////////////////////////////////////////////////////////
 
 
-wire [1:0] ar = status[9:8];
-
-assign VIDEO_ARX = 4;
-assign VIDEO_ARY = 3;
 
 assign LED_USER  = 1;
 
@@ -177,8 +173,10 @@ localparam CONF_STR = {
 	"UK101;;",
 	"-;",
 	"O89,Aspect ratio,Original,Full Screen,[ARC1],[ARC2];",
-	"O34,Colours,White on blue,White on black,Green on black,Yellow on black;",
-	"D0O55,Screen size,64x32,48x16;",
+	//"OCD,Scandoubler Fx,None,HQ2x,CRT 25%,CRT 50%;",
+	"OFG,Scale,Normal,V-Integer,Narrower HV-Integer,Wider HV-Integer;",
+	//"O34,Colours,White on blue,White on black,Green on black,Yellow on black;",
+	//"D0O55,Screen size,64x32,48x16;",
 	"O66,Monitor,Cegmon,MonUK02(NewMon);",
 	"O77,Baud Rate,9600,300;",
 	"RA,Reset;",
@@ -196,12 +194,13 @@ wire  [1:0] buttons;
 wire [31:0] status;
 wire PS2_CLK;
 wire PS2_DAT;
-wire [1:0] colour_scheme = status[4:3];
-wire resolution;
+//wire [1:0] colour_scheme = status[4:3];
+//wire resolution;
 wire monitor_type=status[6];
 wire baud_rate=status[7];
-assign resolution = monitor_type ? 1 : status[5];
+//assign resolution = monitor_type ? 1 : status[5];
 wire forced_scandoubler;
+wire [21:0] gamma_bus;
 
 
 
@@ -214,8 +213,8 @@ hps_io #(.CONF_STR(CONF_STR),.PS2DIV(2000)) hps_io
 	.ps2_kbd_clk_out(PS2_CLK),
 	.ps2_kbd_data_out(PS2_DAT),
 	.forced_scandoubler(forced_scandoubler),
-	.status_menumask({status[6]})
-
+	.status_menumask({status[6]}),
+	.gamma_bus(gamma_bus)
 
 );
 ///////////////////
@@ -223,26 +222,49 @@ hps_io #(.CONF_STR(CONF_STR),.PS2DIV(2000)) hps_io
 ///////////////////////////////////////////////////
 wire clk_sys, locked;
 wire clk_VIDEO;
+wire pll_clk_video;
 
 pll pll
 (
 	.refclk(CLK_50M),
 	.rst(0),
 	.outclk_0(clk_sys), // 50M
-	.outclk_1(CLK_VIDEO),
 	.locked(locked)
 );
 
 ///////////////////////////////////////////////////
 wire reset = RESET | status[0] | buttons[1] | status[10] ;
 
-//assign CLK_VIDEO = clk_sys;
-assign CE_PIXEL = 1;
+assign CLK_VIDEO = clk_sys;
+
 
 ///////////////////////////////////////////////////
 wire r, g, b;
-wire vs,hs,de;
+wire vs,hs;
+wire hsync, vsync;
 wire hblank, vblank;
+wire CE_PIX;
+wire freeze_sync;
+reg [2:0] count = 0;
+
+always @(posedge clk_sys) begin
+	if (count == 5)
+	begin
+		count <= 0;
+		CE_PIX <= 1'b1;
+		end
+	else	
+		begin
+		count <= count + 1'b1;
+		CE_PIX <= 1'b0;
+		end
+end
+
+
+wire [1:0] scale = status[13:12];
+assign VGA_SL = scale ? scale - 1'd1 : 2'd0;
+//assign VGA_SL=sl[1:0];
+assign VGA_F1 = 0;
 
 uk101 uk101
 (
@@ -253,14 +275,14 @@ uk101 uk101
 	.ps2Data(PS2_DAT),
 	.hsync(hs),
 	.vsync(vs),	
-	.hblank(hblank),
-	.vblank(vblank),
-	//.de(de),	
+	.ce_pix(CE_PIX),	
 	.r(r),			
 	.g(g),
-	.b(b),
-	.colours(colour_scheme),
-	.resolution(resolution),
+	.b(b),	
+	.hblank(hblank),
+	.vblank(vblank),
+	//.colours(colour_scheme),
+	//.resolution(resolution),
 	.monitor_type(monitor_type),
 	.baud_rate(baud_rate),
 	.rxd(UART_RXD),
@@ -268,26 +290,49 @@ uk101 uk101
 	.rts(UART_RTS)
 );
 
-video_cleaner video_cleaner
-(
-	.clk_vid(CLK_VIDEO),
-	.ce_pix(CE_PIXEL),
 
-	.R({8{r}}),
-	.G({8{g}}),
-	.B({8{b}}),
+wire [1:0] ar = status[9:8];
+
+//assign VIDEO_ARX = 4;
+//assign VIDEO_ARY = 3;
+
+video_freak video_freak
+(
+	.*,
+	.CE_PIXEL(CE_PIX),
+	.CLK_VIDEO(CLK_VIDEO),
+	.VGA_DE_IN(VGA_DE),
+	.VGA_DE(),
+
+	.ARX((!ar) ? 12'd4 : (ar - 1'd1)),
+	.ARY((!ar) ? 12'd3 : 12'd0),
+	.CROP_SIZE(0),
+	.CROP_OFF(0),
+	.SCALE(status[16:15])
+);
+
+
+
+video_mixer #(.LINE_LENGTH(494), .HALF_DEPTH(1), .GAMMA(1)) video_mixer
+(
+	.*,
+	.CLK_VIDEO(CLK_VIDEO),
+	.ce_pix(CE_PIX),
+	.scandoubler(scale || forced_scandoubler),
+	.hq2x(scale == 1),
+
+	.R({4{r}}),
+	.G({4{g}}),
+	.B({4{b}}),
 	.HSync(hs),
 	.VSync(vs),
-	.HBlank(hblank),
-	.VBlank(vblank),
 
-	.VGA_R(VGA_R),
-	.VGA_G(VGA_G),
-	.VGA_B(VGA_B),
-	.VGA_VS(VGA_VS),
-	.VGA_HS(VGA_HS),
-	.VGA_DE(VGA_DE)
+
+	.HBlank(hblank),
+	.VBlank(vblank)
+
 );
+
 
 
 endmodule

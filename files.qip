@@ -1,5 +1,5 @@
+set_global_assignment -name VHDL_FILE UK101/Components/TV/UK101TextDisplay.vhd
 set_global_assignment -name VHDL_FILE UK101/Components/UART/bufferedUART.vhd
-set_global_assignment -name VHDL_FILE UK101/Components/TV/vga.vhd
 set_global_assignment -name VHDL_FILE UK101/Components/PS2KB/UK101keyboard.vhd
 set_global_assignment -name VHDL_FILE UK101/Components/PS2KB/ps2_intf.vhd
 set_global_assignment -name VHDL_FILE UK101/Components/M6502/T65_Pack.vhd
