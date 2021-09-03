@@ -6,7 +6,7 @@ Port by [danielb0](https://github.com/danielb0)
 
 This core is a port of [Grant Searle's UK101 FPGA project](http://searle.x10host.com/uk101FPGA/index.html) to MiSTer FPGA. It is a reconstruction of a kit computer from the late 1970s, which was based on a 6502 processor that ran at 1 MHz and originally came equipped with 8Kb of RAM.
 
-This core includes some enhancements which Grant added to his own project such as a 64Kb RAM expansion, giving 41K of free RAM for BASIC.
+This core includes some enhancements which Grant added to his own project such as a 64Kb RAM expansion, giving 40K of free RAM for BASIC.
 
 Saving and loading of Basic programs can be done via the UART, at 9600 baud. Instructions for this can be found on Grant's page and in the [Compukit UK101 manual](http://uk101.sourceforge.net/docs/pdf/manual.pdf).
 
