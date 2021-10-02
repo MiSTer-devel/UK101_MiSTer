@@ -41,7 +41,12 @@ entity uk101 is
 		hblank		:	out std_logic;
 		vblank		:	out std_logic;
 		ps2Clk		: in std_logic;
-		ps2Data		: in std_logic
+		ps2Data		: in std_logic;
+		loadFrom			: in std_logic;
+	   ioctl_download : in std_logic;
+		ioctl_wr : in std_logic;
+		ioctl_data : in std_logic_vector(7 downto 0);
+      ioctl_addr  : in std_logic_vector(15 downto 0)
 	);
 end uk101;
 
@@ -89,10 +94,11 @@ architecture struct of uk101 is
 	
 	signal serialClkCount1: integer := 0;
 	signal serialClkCount2: integer := 0;
-	
+
 
 
 begin
+
 
 	serialClkCount1 <= c_9600BaudClkCount1 when baud_rate = '0' else c_300BaudClkCount1;
 	serialClkCount2 <= c_9600BaudClkCount2 when baud_rate = '0' else c_300BaudClkCount2;
@@ -181,6 +187,7 @@ begin
 
 	u5: entity work.bufferedUART
 	port map(
+		clk => clk,
 		n_wr => n_aciaCS or cpuClock or n_WR,
 		n_rd => n_aciaCS or cpuClock or (not n_WR),
 		regSel => cpuAddress(0),
@@ -192,7 +199,13 @@ begin
 		txd => txd,
 		n_cts => '0',
 		n_dcd => '0',
-		n_rts => rts
+		n_rts => rts,
+		ioctl_download => ioctl_download,
+	   ioctl_data => ioctl_data,
+		ioctl_addr => ioctl_addr,
+		ioctl_wr => ioctl_wr,
+		loadFrom => loadFrom
+	
 	);
 
 	process (clk)

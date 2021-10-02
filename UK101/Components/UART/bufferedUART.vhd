@@ -22,6 +22,7 @@ library ieee;
 
 entity bufferedUART is
 	port (
+		clk		:	in std_logic;
 		n_wr    : in  std_logic;
 		n_rd    : in  std_logic;
 		regSel  : in  std_logic;
@@ -34,88 +35,146 @@ entity bufferedUART is
 		txd     : out std_logic;
 		n_rts   : out std_logic :='0';
 		n_cts   : in  std_logic; 
-		n_dcd   : in  std_logic
+		n_dcd   : in  std_logic;
+		ioctl_download : in std_logic;
+		ioctl_wr : in std_logic;
+		ioctl_data : in std_logic_vector(7 downto 0);
+      ioctl_addr :  in std_logic_vector(15 downto 0);
+		loadFrom : in std_logic
+
    );
 end bufferedUART;
 
 architecture rtl of bufferedUART is
+	
+	type byteArray is array (0 to 65535) of std_logic_vector(7 downto 0);
+	signal ascii_data : byteArray;
+	signal ascii : std_logic_vector(7 downto 0);
+   signal in_dl : std_logic;
+	signal ascii_rdy : std_logic;
+	signal w_data_ready : std_logic;
+	signal i_outCounter  : integer range 0 to 65535 := 0;
+	signal i_ascii_last_byte : integer range 0 to 65535 := 0;
+	signal i_ioctl_addr : integer range 0 to 65535 := 0;
+	signal prev_clk : std_logic;
+	signal statusReg : std_logic_vector(7 downto 0) := (others => '0'); 
+	signal n_int_internal   : std_logic := '1';
+	signal controlReg : std_logic_vector(7 downto 0) := "00000000";
+	 
+	signal rxBitCount: std_logic_vector(3 DOWNTO 0); 
+	signal txBitCount: std_logic_vector(3 DOWNTO 0); 
 
-signal n_int_internal   : std_logic := '1';
-signal statusReg : std_logic_vector(7 downto 0) := (others => '0'); 
-signal controlReg : std_logic_vector(7 downto 0) := "00000000";
- 
-signal rxBitCount: std_logic_vector(3 DOWNTO 0); 
-signal txBitCount: std_logic_vector(3 DOWNTO 0); 
+	signal rxClockCount: std_logic_vector(5 DOWNTO 0); 
+	signal txClockCount: std_logic_vector(5 DOWNTO 0); 
 
-signal rxClockCount: std_logic_vector(5 DOWNTO 0); 
-signal txClockCount: std_logic_vector(5 DOWNTO 0); 
+	signal rxCurrentByteBuffer: std_logic_vector(7 DOWNTO 0); 
+	signal txBuffer: std_logic_vector(7 DOWNTO 0); 
 
-signal rxCurrentByteBuffer: std_logic_vector(7 DOWNTO 0); 
-signal txBuffer: std_logic_vector(7 DOWNTO 0); 
+	signal txByteLatch: std_logic_vector(7 DOWNTO 0); 
 
-signal txByteLatch: std_logic_vector(7 DOWNTO 0); 
+	-- Use bit toggling to determine change of state
+	-- If byte sent over serial, change "txByteSent" flag from 0-->1, or from 1-->0
+	-- If byte written to tx buffer, change "txByteWritten" flag from 0-->1, or from 1-->0
+	-- So, if "txByteSent" = "txByteWritten" then no new data to be sent
+	-- otherwise (if "txByteSent" /= "txByteWritten") then new data available ready to be sent
+	signal txByteWritten : std_logic := '0';
+	signal txByteSent : std_logic := '0';
 
--- Use bit toggling to determine change of state
--- If byte sent over serial, change "txByteSent" flag from 0-->1, or from 1-->0
--- If byte written to tx buffer, change "txByteWritten" flag from 0-->1, or from 1-->0
--- So, if "txByteSent" = "txByteWritten" then no new data to be sent
--- otherwise (if "txByteSent" /= "txByteWritten") then new data available ready to be sent
-signal txByteWritten : std_logic := '0';
-signal txByteSent : std_logic := '0';
+	type serialStateType is ( idle, dataBit, stopBit );
+	signal rxState : serialStateType;
+	signal txState : serialStateType;
 
-type serialStateType is ( idle, dataBit, stopBit );
-signal rxState : serialStateType;
-signal txState : serialStateType;
+	signal reset : std_logic := '0';
 
-signal reset : std_logic := '0';
+	type rxBuffArray is array (0 to 31) of std_logic_vector(7 downto 0);
+	signal rxBuffer : rxBuffArray;
 
-type rxBuffArray is array (0 to 31) of std_logic_vector(7 downto 0);
-signal rxBuffer : rxBuffArray;
-
-signal rxInPointer: integer range 0 to 63 :=0;
-signal rxReadPointer: integer range 0 to 63 :=0;
-signal rxBuffCount: integer range 0 to 63 :=0;
-
+	signal rxInPointer: integer range 0 to 63 :=0;
+	signal rxReadPointer: integer range 0 to 63 :=0;
+	signal rxBuffCount: integer range 0 to 63 :=0;
+	signal fileOut: std_logic_vector (7 downto 0);
+	signal uartOut: std_logic_vector (7 downto 0);
+	
 begin
-	-- minimal 6850 compatibility
-	statusReg(0) <= '0' when rxInPointer=rxReadPointer else '1';
-	statusReg(1) <= '1' when txByteWritten=txByteSent else '0';
-	statusReg(2) <= n_dcd;
-	statusReg(3) <= n_cts;
-	statusReg(7) <= not(n_int_internal);
-	  
-	-- interrupt mask
-	n_int <= n_int_internal;
-	n_int_internal <= '0' when (rxInPointer /= rxReadPointer) and controlReg(7)='1'
-	         else '0' when (txByteWritten=txByteSent) and controlReg(6)='0' and controlReg(5)='1'
+
+		i_ioctl_addr <= to_integer(unsigned(ioctl_addr));
+		dataOut <= fileOut when loadFrom = '0' else uartOut;
+		statusReg(0) <= '0' when loadFrom = '0' and i_ioctl_addr = i_outCounter
+							else '0' when loadFrom = '1' and rxInPointer=rxReadPointer else '1';
+		statusReg(1) <=  '1' when loadFrom = '0' else
+						     '1' when loadFrom = '1' and txByteWritten=txByteSent else '0';
+		statusReg(2) <= n_dcd;
+		statusReg(3) <= n_cts;
+		statusReg(7) <= not(n_int_internal);
+		  
+		-- interrupt mask
+		n_int <= n_int_internal;
+		n_int_internal <= '0' when loadFrom = '0' and (i_ioctl_addr /= i_outCounter) and in_dl ='1'
+				else '0' when loadFrom = '1' and (rxInPointer /= rxReadPointer) and controlReg(7)='1'
+	         else '0' when loadFrom = '1' and (txByteWritten=txByteSent) and controlReg(6)='0' and controlReg(5)='1'
 				else '1';
-
--- raise (inhibit) n_rts when buffer over half-full
---	6850 implementatit = n_rts <= '1' when controlReg(6)='1' and controlReg(5)='0' else '0';
-
-	rxBuffCount <= 0 + rxInPointer - rxReadPointer when rxInPointer >= rxReadPointer
-		else 32 + rxInPointer - rxReadPointer;
-	n_rts <= '1' when rxBuffCount > 24 else '0';
 	
-	-- control reg
-	--     7               6                     5              4          3        2         1         0
-	-- Rx int en | Tx control (INT/RTS) | Tx control (RTS) | ignored | ignored | ignored | reset A | reset B
-	--             [        0                   1         ] = RTS LOW
-	--                                                                             RESET = [  1         1  ]
+	    w_data_ready <= (in_dl and (not ioctl_download)) when loadFrom = '0' else '1';
+		 
+		 -- raise (inhibit) n_rts when buffer over half-full
+		--	6850 implementatit = n_rts <= '1' when controlReg(6)='1' and controlReg(5)='0' else '0';
 
-	-- status reg
-	--     7              6                5         4          3        2         1         0
-	--    irq   |   parity error      | overrun | frame err | n_cts  | n_dcd |  tx empty | rx full
-   --            always 0 (no parity)    n/a        n/a
+			rxBuffCount <= 0 + rxInPointer - rxReadPointer when loadFrom = '1' and rxInPointer >= rxReadPointer
+				else 32 + rxInPointer - rxReadPointer;
+			n_rts <= '1' when loadFrom = '1' and rxBuffCount > 24 else '0';
+		
+	o1: process (clk)
 	
-	-- write of xxxxxx11 to control reg will reset
+	begin
+	if loadFrom = '0' then
+		if rising_edge (clk) then
+					
+					if prev_clk = '1' and n_rd = '0' then
+							if ascii_rdy = '0' and w_data_ready = '1' and i_outCounter <= i_ascii_last_byte then
+										ascii <= ascii_data(i_outCounter)(7 downto 0);
+										i_outCounter <= i_outCounter+1;
+										ascii_rdy <= '1';
+							end if;
+					 end if;
+			
+					if ioctl_download = '1' then
+						ascii_data(i_ioctl_addr) <= ioctl_data;
+						i_ascii_last_byte <= i_ioctl_addr;
+						i_outCounter <= 0;
+						in_dl <= '1';
+					else
+						if in_dl = '1' and i_outCounter = i_ioctl_addr then
+							in_dl<= '0';
+						end if;
+					end if;
+	
+		
+					if n_rd = '0' and in_dl = '1' then	
+						if regSel = '1' then
+					
+									fileOut <= ascii(7 downto 0);
+
+									ascii_rdy <= '0';
+						else
+									fileout<= statusReg;
+						end if;
+					end if;
+				prev_clk <= n_rd;
+		end if;
+		
+	end if;
+	end process;
+	
+	
+		-- write of xxxxxx11 to control reg will reset
 	reset <= '1' when n_wr = '0' and dataIn(1 downto 0) = "11" and regSel = '0' else '0';
   
 	process( n_rd )
 	begin
+	if loadFrom = '1' then
 		if falling_edge(n_rd) then -- Standard CPU - present data on leading edge of rd
 			if regSel='1' then
-				dataOut <= rxBuffer(rxReadPointer);
+				uartOut <= rxBuffer(rxReadPointer);
 				if rxInPointer /= rxReadPointer then
 					if rxReadPointer < 31 then
 						rxReadPointer <= rxReadPointer+1;
@@ -124,13 +183,15 @@ begin
 					end if;
 				end if;
 			else
-				dataOut <= statusReg;
+				uartOut <= statusReg;
 			end if;
+		end if;
 		end if;
 	end process;
 
 	process( n_wr )
 	begin
+	if loadFrom = '1' then
 		if rising_edge(n_wr) then -- Standard CPU - capture data on trailing edge of wr
 			if regSel='1' then
 				if txByteWritten=txByteSent then
@@ -141,10 +202,12 @@ begin
 				controlReg <= dataIn;
 			end if;
 		end if;
+		end if;
 	end process;
 
 	process( rxClock , reset )
 	begin
+	if loadFrom = '1' then
 		if reset='1' then
 			rxState <= idle;
 			rxBitCount<="0000";
@@ -189,11 +252,13 @@ begin
 					rxClockCount<=rxClockCount+1;
 				end if;
 			end case;
-		end if;              
+		end if;      
+	end if;
 	end process;
 
 	process( txClock , reset )
 	begin
+	if loadFrom = '1' then
 		if reset='1' then
 			txState <= idle;
 			txBitCount<="0000";
@@ -233,6 +298,12 @@ begin
 					txClockCount<=txClockCount+1;
 				end if;
 			end case;
-		end if;              
+		end if; 
+	end if;		
 	end process;
- end rtl;
+	
+		
+end rtl;
+
+
+

@@ -8,7 +8,7 @@ This core is a port of [Grant Searle's UK101 FPGA project](http://searle.x10host
 
 This core includes some enhancements which Grant added to his own project such as a 64Kb RAM expansion, giving 40K of free RAM for BASIC.
 
-Saving and loading of Basic programs can be done via the UART, at 9600 baud. Instructions for this can be found on Grant's page and in the [Compukit UK101 manual](http://uk101.sourceforge.net/docs/pdf/manual.pdf).
+Basic programs can be loaded from text files, or via the UART at 9600 baud. Text files must have a .TXT extension. Instructions for loading can be found on Grant's page and in the [Compukit UK101 manual](http://uk101.sourceforge.net/docs/pdf/manual.pdf).
 
 ### Original sources
 

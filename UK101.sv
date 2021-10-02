@@ -140,6 +140,8 @@ module emu
 
 ///////// Default values for ports not used in this core /////////
 
+//assign LED_USER = ioctl_download;
+
 assign ADC_BUS  = 'Z;
 assign USER_OUT = '1;
 assign UART_DTR = 0;
@@ -165,13 +167,14 @@ assign BUTTONS = 0;
 
 
 
-assign LED_USER  = 1;
 
 
 `include "build_id.v"
 localparam CONF_STR = {
 	"UK101;;",
 	"-;",
+	"F,TXT,Load Ascii;",
+	"O33,Load programs from, File,UART;",
 	"O89,Aspect ratio,Original,Full Screen,[ARC1],[ARC2];",
 	//"OCD,Scandoubler Fx,None,HQ2x,CRT 25%,CRT 50%;",
 	"OFG,Scale,Normal,V-Integer,Narrower HV-Integer,Wider HV-Integer;",
@@ -194,7 +197,7 @@ wire  [1:0] buttons;
 wire [31:0] status;
 wire PS2_CLK;
 wire PS2_DAT;
-//wire [1:0] colour_scheme = status[4:3];
+wire loadFrom = status[3];
 //wire resolution;
 wire monitor_type=status[6];
 wire baud_rate=status[7];
@@ -202,11 +205,18 @@ wire baud_rate=status[7];
 wire forced_scandoubler;
 wire [21:0] gamma_bus;
 
+wire ioctl_download;
+wire ioctl_wr;
+wire [15:0] ioctl_addr;
+wire [7:0] ioctl_data;
+wire [7:0] ioctl_index;
+wire ioctl_wait;
+
 
 
 hps_io #(.CONF_STR(CONF_STR),.PS2DIV(2000)) hps_io
 (
-	.clk_sys(CLK_50M),
+	.clk_sys(clk_sys),
 	.HPS_BUS(HPS_BUS),
 	.buttons(buttons),
 	.status(status),
@@ -214,7 +224,14 @@ hps_io #(.CONF_STR(CONF_STR),.PS2DIV(2000)) hps_io
 	.ps2_kbd_data_out(PS2_DAT),
 	.forced_scandoubler(forced_scandoubler),
 	.status_menumask({status[6]}),
-	.gamma_bus(gamma_bus)
+	.gamma_bus(gamma_bus),
+	
+	.ioctl_download(ioctl_download),
+	.ioctl_wr(ioctl_wr),
+	.ioctl_addr(ioctl_addr),
+	.ioctl_dout(ioctl_data),
+	.ioctl_index(ioctl_index),
+	.ioctl_wait(ioctl_wait)
 
 );
 ///////////////////
@@ -287,7 +304,12 @@ uk101 uk101
 	.baud_rate(baud_rate),
 	.rxd(UART_RXD),
 	.txd(UART_TXD),
-	.rts(UART_RTS)
+	.rts(UART_RTS),
+	.loadFrom(loadFrom),
+	.ioctl_download(ioctl_download),
+   .ioctl_data(ioctl_data),
+   .ioctl_addr(ioctl_addr),
+	.ioctl_wr(ioctl_wr)
 );
 
 
