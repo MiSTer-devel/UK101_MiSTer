@@ -173,8 +173,8 @@ assign BUTTONS = 0;
 localparam CONF_STR = {
 	"UK101;;",
 	"-;",
-	"F,TXT,Load Ascii;",
-	"O33,Load programs from, File,UART;",
+	"D0F,TXT,Load Ascii;",
+	"O33,Load programs from,File,UART;",
 	"O89,Aspect ratio,Original,Full Screen,[ARC1],[ARC2];",
 	//"OCD,Scandoubler Fx,None,HQ2x,CRT 25%,CRT 50%;",
 	"OFG,Scale,Normal,V-Integer,Narrower HV-Integer,Wider HV-Integer;",
@@ -223,7 +223,7 @@ hps_io #(.CONF_STR(CONF_STR),.PS2DIV(2000)) hps_io
 	.ps2_kbd_clk_out(PS2_CLK),
 	.ps2_kbd_data_out(PS2_DAT),
 	.forced_scandoubler(forced_scandoubler),
-	.status_menumask({status[6]}),
+	.status_menumask({status[3]}),
 	.gamma_bus(gamma_bus),
 	
 	.ioctl_download(ioctl_download),
