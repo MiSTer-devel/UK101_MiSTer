@@ -175,13 +175,17 @@ localparam CONF_STR = {
 	"-;",
 	"D0F,TXT,Load Ascii;",
 	"O33,Load programs from,File,UART;",
+	"-;",
 	"O89,Aspect ratio,Original,Full Screen,[ARC1],[ARC2];",
 	//"OCD,Scandoubler Fx,None,HQ2x,CRT 25%,CRT 50%;",
 	"OFG,Scale,Normal,V-Integer,Narrower HV-Integer,Wider HV-Integer;",
 	//"O34,Colours,White on blue,White on black,Green on black,Yellow on black;",
-	//"D0O55,Screen size,64x32,48x16;",
+	"D3O55,Screen size,48x16,64x32;",
+	"-;",
 	"O66,Monitor,Cegmon,MonUK02(NewMon);",
+	"-;",
 	"O77,Baud Rate,9600,300;",
+	"-;",
 	"RA,Reset;",
 	"-;",
 	"-;",
@@ -198,10 +202,10 @@ wire [31:0] status;
 wire PS2_CLK;
 wire PS2_DAT;
 wire loadFrom = status[3];
-//wire resolution;
+wire resolution;
 wire monitor_type=status[6];
 wire baud_rate=status[7];
-//assign resolution = monitor_type ? 1 : status[5];
+assign resolution = monitor_type ? 0 : status[5];
 wire forced_scandoubler;
 wire [21:0] gamma_bus;
 
@@ -223,7 +227,7 @@ hps_io #(.CONF_STR(CONF_STR),.PS2DIV(2000)) hps_io
 	.ps2_kbd_clk_out(PS2_CLK),
 	.ps2_kbd_data_out(PS2_DAT),
 	.forced_scandoubler(forced_scandoubler),
-	.status_menumask({status[3]}),
+	.status_menumask(status[6:3]),
 	.gamma_bus(gamma_bus),
 	
 	.ioctl_download(ioctl_download),
@@ -264,8 +268,12 @@ wire CE_PIX;
 wire freeze_sync;
 reg [2:0] count = 0;
 
+wire [2:0] ce_pix_count;
+
+assign ce_pix_count = resolution ? 3 : 5;
+
 always @(posedge clk_sys) begin
-	if (count == 5)
+	if (count == ce_pix_count)
 	begin
 		count <= 0;
 		CE_PIX <= 1'b1;
@@ -299,7 +307,7 @@ uk101 uk101
 	.hblank(hblank),
 	.vblank(vblank),
 	//.colours(colour_scheme),
-	//.resolution(resolution),
+	.resolution(resolution),
 	.monitor_type(monitor_type),
 	.baud_rate(baud_rate),
 	.rxd(UART_RXD),

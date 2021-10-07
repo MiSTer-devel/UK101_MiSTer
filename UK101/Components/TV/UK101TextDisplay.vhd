@@ -23,10 +23,11 @@ entity UK101TextDisplay is
 	port (
 		charAddr : out std_LOGIC_VECTOR(10 downto 0);
 		charData : in std_LOGIC_VECTOR(7 downto 0);
-		dispAddr : out std_LOGIC_VECTOR(9 downto 0);
+		dispAddr : out std_LOGIC_VECTOR(10 downto 0);
 		dispData : in std_LOGIC_VECTOR(7 downto 0);
 		clk    	: in  std_logic;
 		ce_pix	: in std_logic; 	
+		resolution	: in std_logic; 	
 		r		: out std_logic;
 		g		: out std_logic;
 		b		: out std_logic;
@@ -56,11 +57,14 @@ architecture rtl of UK101TextDisplay is
 	signal	horizCount: STD_LOGIC_VECTOR(11 DOWNTO 0); 
 	signal	vertLineCount: STD_LOGIC_VECTOR(8 DOWNTO 0); 
 
-	signal	charVert: STD_LOGIC_VECTOR(3 DOWNTO 0); 
+	signal	charVert: STD_LOGIC_VECTOR(4 DOWNTO 0); 
 	signal	charScanLine: STD_LOGIC_VECTOR(3 DOWNTO 0); 
 
 	signal	charHoriz: STD_LOGIC_VECTOR(5 DOWNTO 0); 
 	signal	charBit: STD_LOGIC_VECTOR(3 DOWNTO 0); 
+	signal	charHeight: STD_LOGIC_VECTOR(3 DOWNTO 0); 
+	signal	rightBorder: STD_LOGIC_VECTOR(11 DOWNTO 0); 
+
 
 begin
 
@@ -76,7 +80,10 @@ begin
 	sync <= hSync and vSync;
 	
 	dispAddr <= charVert & charHoriz;
-	charAddr <= dispData & charScanLine(3 DOWNTO 1);
+	charAddr <= dispData & charScanLine(3 DOWNTO 1) when resolution = '0' else dispData & charScanLine(2 downto 0);
+	charHeight(3 downto 0)<= "1111" when resolution = '0' else "0111";
+	rightBorder <= X"1F4" when resolution = '0' else X"206";
+	
 	
 	PROCESS (clk)
 	BEGIN
@@ -96,7 +103,7 @@ begin
 			IF horizCount < 534 THEN
 				horizCount <= horizCount + 1;
 --				if (horizCount < 600) or (horizCount > 3000) then
-				if (horizCount < 7) or (horizCount > 500) then
+				if (horizCount < 7) or (horizCount > rightBorder) then
 					hActive <= '0';
 					charHoriz <= (others => '0');
 				else
@@ -117,7 +124,7 @@ begin
 						charScanLine <= (others => '0');
 					else
 						vActive <= '1';
-						if charScanLine = 15 then
+						if charScanLine = charHeight then
 							charScanLine <= (others => '0');
 							charVert <= charVert+1;
 						else
