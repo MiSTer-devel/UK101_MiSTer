@@ -185,6 +185,7 @@ localparam CONF_STR = {
 	"O66,Monitor,Cegmon,MonUK02(NewMon);",
 	"-;",
 	"O77,Baud Rate,9600,300;",
+	"OHJ,Clock speed,1Mhz,2Mhz,4Mhz,8Mhz,10Mhz;",
 	"-;",
 	"RA,Reset;",
 	"-;",
@@ -245,11 +246,13 @@ wire clk_sys, locked;
 wire clk_VIDEO;
 wire pll_clk_video;
 
+
 pll pll
 (
 	.refclk(CLK_50M),
 	.rst(0),
-	.outclk_0(clk_sys), // 50M
+	.outclk_0(clk_sys), // 48M
+
 	.locked(locked)
 );
 
@@ -295,6 +298,7 @@ uk101 uk101
 (
 	.n_reset(~reset),
 	.clk (clk_sys),
+	.cpuOverclock(status[19:17]),
 	.video_clock(CLK_VIDEO),
 	.ps2Clk(PS2_CLK),
 	.ps2Data(PS2_DAT),

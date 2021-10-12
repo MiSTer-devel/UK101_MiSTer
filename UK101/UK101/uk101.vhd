@@ -14,15 +14,16 @@
 -- eMail address available on my main web page link above.
 
 library ieee;
-use ieee.std_logic_1164.all;
-use  IEEE.STD_LOGIC_ARITH.all;
-use  IEEE.STD_LOGIC_UNSIGNED.all;
+	use ieee.std_logic_1164.all;
+	use ieee.numeric_std.all;
+	use ieee.std_logic_unsigned.all;
 
 entity uk101 is
 	port(
 		n_reset		: in std_logic;
 		clk			: in std_logic;
 		video_clock	: in std_logic; 
+		cpuOverclock	: in std_logic_vector(2 downto 0);
 		ce_pix	: in std_logic; 	
 		rxd			: in std_logic;
 		txd			: out std_logic;
@@ -94,19 +95,32 @@ architecture struct of uk101 is
 	
 	signal serialClkCount1: integer := 0;
 	signal serialClkCount2: integer := 0;
+	signal i_clockThreshold1 : integer range 0 to 50 := 0;
+	signal i_clockThreshold2 : integer range 0 to 25 := 0;
+	signal i_cpuOverclock : integer range 0 to 5 := 0;
 
 
 
 begin
 
-
+	i_clockThreshold1 <= 49 when i_cpuOverclock = 0 else 	--1Mhz
+								23 when i_cpuOverclock = 1 else	--2 Mhz
+								11 when i_cpuOverclock = 2 else	--4 Mhz
+								5 when i_cpuOverclock = 3 else 4; -- 8, 10 Mhz
+								
+	i_clockThreshold2 <= 25 when i_cpuOverclock = 0 else
+							  12 when i_cpuOverclock = 1 else
+							  6 when i_cpuOverclock = 2 else
+							  3 when i_cpuOverclock = 3 else 2;
+								
 	serialClkCount1 <= c_9600BaudClkCount1 when baud_rate = '0' else c_300BaudClkCount1;
 	serialClkCount2 <= c_9600BaudClkCount2 when baud_rate = '0' else c_300BaudClkCount2;
-
+	
+	i_cpuOverclock <= to_integer(unsigned(cpuOverclock));
+	
 	n_memWR <= not(cpuClock) nand (not n_WR);
 
-	n_dispRamCS <= '0' when cpuAddress(15 downto 11) = "11010" and resolution = '1' else 
-						'0' when cpuAddress(15 downto 10)  = "110100" and resolution = '0' else '1';
+	n_dispRamCS <= '0' when cpuAddress(15 downto 11) = "11010" else '1';
 	n_basRomCS <= '0' when cpuAddress(15 downto 13) = "101" else '1'; --8k
 	n_monitorRomCS <= '0' when cpuAddress(15 downto 11) = "11111" else '1'; --2K
 	n_ramCS <= not(n_dispRamCS and n_basRomCS and n_monitorRomCS and n_aciaCS and n_kbCS);
@@ -114,7 +128,13 @@ begin
 	n_kbCS <= '0' when cpuAddress(15 downto 10) = "110111" else '1';
  
 	cpuDataIn <=
-		    -- CEGMON PATCH FOR 64x32 SCREEN
+		    -- CEGMON PATCH TO CORRECT AUTO-REPEAT IN FAST MODE
+		x"A0" when cpuAddress = "1111110011100000" and i_cpuOverclock = 4 else -- Address = FCE0 and fastMode = 1 : CHANGE REPEAT RATE LOOP VALUE (was $10)
+		x"80" when cpuAddress = "1111110011100000" and i_cpuOverclock = 3 else 
+		x"40" when cpuAddress = "1111110011100000" and i_cpuOverclock = 2 else 	
+		x"20" when cpuAddress = "1111110011100000" and i_cpuOverclock = 1 else 	
+		x"10" when cpuAddress = "1111110011100000" and i_cpuOverclock = 0 else 		
+		-- CEGMON PATCH FOR 64x32 SCREEN
 		x"3F" when cpuAddress = x"FBBC" and resolution='1' and monitor_type = '0' else -- CEGMON SWIDTH (was $47)
 		x"00" when cpuAddress = x"FBBD" and resolution='1' and monitor_type = '0' else -- CEGMON TOP L (was $0C (1st line) or $8C (3rd line))
 		x"BF" when cpuAddress = x"FBBF" and resolution='1' and monitor_type = '0' else -- CEGMON BASE L (was $CC)
@@ -208,36 +228,7 @@ begin
 		loadFrom => loadFrom
 	
 	);
-
-	process (clk)
-	begin
-		if rising_edge(clk) then
-			if cpuClkCount < 49 then
-				cpuClkCount <= cpuClkCount + 1;
-			else
-				cpuClkCount <= (others=>'0');
-			end if;
-			if cpuClkCount < 25 then
-				cpuClock <= '0';
-			else
-				cpuClock <= '1';
-			end if;	
-			
-			if serialClkCount < serialClkCount1 then
-				serialClkCount <= serialClkCount + 1;
-			else
-				serialClkCount <= (others => '0');
-			end if;
-
-			if serialClkCount < serialClkCount2 then 
-				serialClock <= '0';
-			else
-				serialClock <= '1';
-			end if;	
-		end if;
-	end process;
 	
-
 	u6 : entity work.UK101TextDisplay
 	port map (
 		charAddr => charAddr,
@@ -257,6 +248,37 @@ begin
 		g => g,
 		b => b
 	);
+
+	process (clk)
+	begin
+		if rising_edge(clk) then
+
+			if cpuClkCount < i_clockThreshold1 then
+				 cpuClkCount <= cpuClkCount + 1;
+			else
+				 cpuClkCount <= (others=>'0');
+			end if;
+			if cpuClkCount < i_clockThreshold2 then
+				 cpuClock <= '0';
+			else
+				 cpuClock <= '1';
+			end if;
+     
+							
+			if serialClkCount < serialClkCount1 then
+				serialClkCount <= serialClkCount + 1;
+			else
+				serialClkCount <= (others => '0');
+			end if;
+
+			if serialClkCount < serialClkCount2 then 
+				serialClock <= '0';
+			else
+				serialClock <= '1';
+			end if;	
+		end if;
+	end process;
+	
 
 	u7: entity work.CharRom
 	port map
