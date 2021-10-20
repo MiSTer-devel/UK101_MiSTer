@@ -173,19 +173,20 @@ assign BUTTONS = 0;
 localparam CONF_STR = {
 	"UK101;;",
 	"-;",
-	"D0F,TXT,Load Ascii;",
+	"D0F,TXTBASLOD,Load Ascii;",
 	"O33,Load programs from,File,UART;",
 	"-;",
 	"O89,Aspect ratio,Original,Full Screen,[ARC1],[ARC2];",
 	//"OCD,Scandoubler Fx,None,HQ2x,CRT 25%,CRT 50%;",
 	"OFG,Scale,Normal,V-Integer,Narrower HV-Integer,Wider HV-Integer;",
 	//"O34,Colours,White on blue,White on black,Green on black,Yellow on black;",
-	"D3O55,Screen size,48x16,64x32;",
+	"D3O55,Screen resolution,Low,High;",
 	"-;",
-	"O66,Monitor,Cegmon,MonUK02(NewMon);",
+	"D4O66,Monitor,Cegmon,MonUK02(NewMon);",
 	"-;",
 	"O77,Baud Rate,9600,300;",
 	"OHJ,Clock speed,1Mhz,2Mhz,4Mhz,8Mhz,10Mhz;",
+	"OKK,Machine,UK101,OSI;",
 	"-;",
 	"RA,Reset;",
 	"-;",
@@ -206,6 +207,7 @@ wire loadFrom = status[3];
 wire resolution;
 wire monitor_type=status[6];
 wire baud_rate=status[7];
+wire machine_type=status[20];
 assign resolution = monitor_type ? 0 : status[5];
 wire forced_scandoubler;
 wire [21:0] gamma_bus;
@@ -228,7 +230,7 @@ hps_io #(.CONF_STR(CONF_STR),.PS2DIV(2000)) hps_io
 	.ps2_kbd_clk_out(PS2_CLK),
 	.ps2_kbd_data_out(PS2_DAT),
 	.forced_scandoubler(forced_scandoubler),
-	.status_menumask(status[6:3]),
+	.status_menumask({status[20],status[6:3]}),
 	.gamma_bus(gamma_bus),
 	
 	.ioctl_download(ioctl_download),
@@ -269,11 +271,28 @@ wire hsync, vsync;
 wire hblank, vblank;
 wire CE_PIX;
 wire freeze_sync;
-reg [2:0] count = 0;
+reg [3:0] count = 0;
 
-wire [2:0] ce_pix_count;
+wire [3:0] ce_pix_count;
 
-assign ce_pix_count = resolution ? 3 : 5;
+//assign ce_pix_count = 11;
+
+always_comb
+begin
+	if (machine_type == 1'b0)
+		ce_pix_count = 5;
+	else
+		begin
+			if (resolution == 1'b0)
+				ce_pix_count = 11;
+			else
+				ce_pix_count = 5;
+		end
+end
+
+
+	
+
 
 always @(posedge clk_sys) begin
 	if (count == ce_pix_count)
@@ -313,6 +332,7 @@ uk101 uk101
 	//.colours(colour_scheme),
 	.resolution(resolution),
 	.monitor_type(monitor_type),
+	.machine_type(machine_type),
 	.baud_rate(baud_rate),
 	.rxd(UART_RXD),
 	.txd(UART_TXD),

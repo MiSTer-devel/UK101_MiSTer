@@ -1,3 +1,4 @@
+set_global_assignment -name QIP_FILE UK101/UK101/BasicRomOSI.qip
 set_global_assignment -name VHDL_FILE UK101/Components/TV/UK101TextDisplay.vhd
 set_global_assignment -name VHDL_FILE UK101/Components/UART/bufferedUART.vhd
 set_global_assignment -name VHDL_FILE UK101/Components/PS2KB/UK101keyboard.vhd

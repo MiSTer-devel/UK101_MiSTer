@@ -27,7 +27,8 @@ entity UK101TextDisplay is
 		dispData : in std_LOGIC_VECTOR(7 downto 0);
 		clk    	: in  std_logic;
 		ce_pix	: in std_logic; 	
-		resolution	: in std_logic; 	
+		resolution	: in std_logic; 
+		monitor_type : in std_logic;
 		r		: out std_logic;
 		g		: out std_logic;
 		b		: out std_logic;
@@ -35,7 +36,8 @@ entity UK101TextDisplay is
 		hsync_out  	: out  std_logic;
 		vsync_out  	: out  std_logic;
 		hblank_out  	: out  std_logic;
-		vblank_out 	: out  std_logic
+		vblank_out 	: out  std_logic;
+		machine_type : in std_logic
    );
 end UK101TextDisplay;
 
@@ -63,7 +65,12 @@ architecture rtl of UK101TextDisplay is
 	signal	charHoriz: STD_LOGIC_VECTOR(5 DOWNTO 0); 
 	signal	charBit: STD_LOGIC_VECTOR(3 DOWNTO 0); 
 	signal	charHeight: STD_LOGIC_VECTOR(3 DOWNTO 0); 
-	signal	rightBorder: STD_LOGIC_VECTOR(11 DOWNTO 0); 
+
+	signal 	charIn : std_LOGIC_VECTOR(7 downto 0);
+	signal 	chartemp : std_LOGIC_VECTOR(7 downto 0);
+	
+	signal	rightBorder: integer range 0 to 550 := 0; 
+	signal 	totalPixels : integer range 0 to 550 := 0;
 
 
 begin
@@ -80,9 +87,20 @@ begin
 	sync <= hSync and vSync;
 	
 	dispAddr <= charVert & charHoriz;
-	charAddr <= dispData & charScanLine(3 DOWNTO 1) when resolution = '0' else dispData & charScanLine(2 downto 0);
-	charHeight(3 downto 0)<= "1111" when resolution = '0' else "0111";
-	rightBorder <= X"1F4" when resolution = '0' else X"206";
+	charAddr <= dispData & charScanLine(3 DOWNTO 1) when resolution = '0' and machine_type = '0'
+					else dispData & charScanLine(2 downto 0);
+	charHeight(3 downto 0)<= "1111" when resolution = '0' and machine_type= '0' else "0111";
+
+	
+	--charIn <= charData(7 downto 0) when machine_type = '0' else charData(0 to 7);
+	gen: for i in 0 to 7 generate
+		charIn(i) <= charData(i) when machine_type='0' else charData(7-i);
+	end generate;
+	
+	totalPixels <= 270 when machine_type = '1' and resolution = '0' 
+					else 534;
+	rightBorder <= 262 when machine_type = '1' and resolution = '0' 
+					else 518;
 	
 	
 	PROCESS (clk)
@@ -100,7 +118,7 @@ begin
 -- 4.7us horiz sync (235 clocks)
 		if rising_edge(clk) then
 		  if ce_pix = '1' then
-			IF horizCount < 534 THEN
+			IF horizCount < totalPixels THEN
 				horizCount <= horizCount + 1;
 --				if (horizCount < 600) or (horizCount > 3000) then
 				if (horizCount < 7) or (horizCount > rightBorder) then
@@ -150,7 +168,7 @@ begin
 			end if;
 			
 			if hActive='1' and vActive = '1' then
-					video <= charData(7-to_integer(unsigned(pixelCount)));
+					video <= charIn(7-to_integer(unsigned(pixelCount)));
 					if pixelCount = 7 then
 						charHoriz <= charHoriz+1;
 					end if;

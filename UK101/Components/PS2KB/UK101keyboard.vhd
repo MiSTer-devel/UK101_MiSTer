@@ -77,7 +77,8 @@ port (
 	-- miscellaneous
 	-- FN keys passed out as general signals (momentary and toggled versions)
 	FNkeys	: out std_logic_vector(12 downto 0);
-	FNtoggledKeys	: out std_logic_vector(12 downto 0)
+	FNtoggledKeys	: out std_logic_vector(12 downto 0);
+	machine_type : in std_logic
 	);
 end UK101keyboard;
 
@@ -132,14 +133,41 @@ begin
 	
 	-- Output addressed matrix row/col
 	-- Original monitor scans for more than one row at a time, so more than one address may be low !
-	KEYB(0) <= (keys(0)(0) or A(0)) and (keys(1)(0) or A(1)) and (keys(2)(0) or A(2)) and (keys(3)(0) or A(3)) and (keys(4)(0) or A(4)) and (keys(5)(0) or A(5)) and (keys(6)(0) or A(6)) and (keys(7)(0) or A(7));
-	KEYB(1) <= (keys(0)(1) or A(0)) and (keys(1)(1) or A(1)) and (keys(2)(1) or A(2)) and (keys(3)(1) or A(3)) and (keys(4)(1) or A(4)) and (keys(5)(1) or A(5)) and (keys(6)(1) or A(6)) and (keys(7)(1) or A(7));
-	KEYB(2) <= (keys(0)(2) or A(0)) and (keys(1)(2) or A(1)) and (keys(2)(2) or A(2)) and (keys(3)(2) or A(3)) and (keys(4)(2) or A(4)) and (keys(5)(2) or A(5)) and (keys(6)(2) or A(6)) and (keys(7)(2) or A(7));
-	KEYB(3) <= (keys(0)(3) or A(0)) and (keys(1)(3) or A(1)) and (keys(2)(3) or A(2)) and (keys(3)(3) or A(3)) and (keys(4)(3) or A(4)) and (keys(5)(3) or A(5)) and (keys(6)(3) or A(6)) and (keys(7)(3) or A(7));
-	KEYB(4) <= (keys(0)(4) or A(0)) and (keys(1)(4) or A(1)) and (keys(2)(4) or A(2)) and (keys(3)(4) or A(3)) and (keys(4)(4) or A(4)) and (keys(5)(4) or A(5)) and (keys(6)(4) or A(6)) and (keys(7)(4) or A(7));
-	KEYB(5) <= (keys(0)(5) or A(0)) and (keys(1)(5) or A(1)) and (keys(2)(5) or A(2)) and (keys(3)(5) or A(3)) and (keys(4)(5) or A(4)) and (keys(5)(5) or A(5)) and (keys(6)(5) or A(6)) and (keys(7)(5) or A(7));
-	KEYB(6) <= (keys(0)(6) or A(0)) and (keys(1)(6) or A(1)) and (keys(2)(6) or A(2)) and (keys(3)(6) or A(3)) and (keys(4)(6) or A(4)) and (keys(5)(6) or A(5)) and (keys(6)(6) or A(6)) and (keys(7)(6) or A(7));
-	KEYB(7) <= (keys(0)(7) or A(0)) and (keys(1)(7) or A(1)) and (keys(2)(7) or A(2)) and (keys(3)(7) or A(3)) and (keys(4)(7) or A(4)) and (keys(5)(7) or A(5)) and (keys(6)(7) or A(6)) and (keys(7)(7) or A(7));
+	KEYB(0) <= ((keys(0)(0) or A(0)) and (keys(1)(0) or A(1)) and (keys(2)(0) or A(2)) and (keys(3)(0) or A(3)) and (keys(4)(0) or A(4)) and (keys(5)(0) or A(5)) and (keys(6)(0) or A(6)) and (keys(7)(0) or A(7))) 
+					when machine_type = '0' else 
+					((not keys(0)(0) and A(0)) or (not keys(1)(0) and A(1)) or (not keys(2)(0) and A(2)) or (not keys(3)(0) and A(3)) or (not keys(4)(0) and A(4)) or (not keys(5)(0) and A(5)) or (not keys(6)(0) and A(6)) or (not keys(7)(0) and A(7)));
+	KEYB(1) <= ((keys(0)(1) or A(0)) and (keys(1)(1) or A(1)) and (keys(2)(1) or A(2)) and (keys(3)(1) or A(3)) and (keys(4)(1) or A(4)) and (keys(5)(1) or A(5)) and (keys(6)(1) or A(6)) and (keys(7)(1) or A(7))) 
+					when machine_type = '0' else
+					((not keys(0)(1) and A(0)) or (not keys(1)(1) and A(1)) or (not keys(2)(1) and A(2)) or (not keys(3)(1) and A(3)) or (not keys(4)(1) and A(4)) or (not keys(5)(1) and A(5)) or (not keys(6)(1) and A(6)) or (not keys(7)(1) and A(7)));
+	KEYB(2) <= ((keys(0)(2) or A(0)) and (keys(1)(2) or A(1)) and (keys(2)(2) or A(2)) and (keys(3)(2) or A(3)) and (keys(4)(2) or A(4)) and (keys(5)(2) or A(5)) and (keys(6)(2) or A(6)) and (keys(7)(2) or A(7)))
+					when machine_type = '0' else
+					((not keys(0)(2) and A(0)) or (not keys(1)(2) and A(1)) or (not keys(2)(2) and A(2)) or (not keys(3)(2) and A(3)) or (not keys(4)(2) and A(4)) or (not keys(5)(2) and A(5)) or (not keys(6)(2) and A(6)) or (not keys(7)(2) and A(7)));
+	KEYB(3) <= ((keys(0)(3) or A(0)) and (keys(1)(3) or A(1)) and (keys(2)(3) or A(2)) and (keys(3)(3) or A(3)) and (keys(4)(3) or A(4)) and (keys(5)(3) or A(5)) and (keys(6)(3) or A(6)) and (keys(7)(3) or A(7)))
+					when machine_type = '0' else
+					((not keys(0)(3) and A(0)) or (not keys(1)(3) and A(1)) or (not keys(2)(3) and A(2)) or (not keys(3)(3) and A(3)) or (not keys(4)(3) and A(4)) or (not keys(5)(3) and A(5)) or (not keys(6)(3) and A(6)) or (not keys(7)(3) and A(7)));
+	KEYB(4) <= ((keys(0)(4) or A(0)) and (keys(1)(4) or A(1)) and (keys(2)(4) or A(2)) and (keys(3)(4) or A(3)) and (keys(4)(4) or A(4)) and (keys(5)(4) or A(5)) and (keys(6)(4) or A(6)) and (keys(7)(4) or A(7)))
+					when machine_type = '0' else
+					((not keys(0)(4) and A(0)) or (not keys(1)(4) and A(1)) or (not keys(2)(4) and A(2)) or (not keys(3)(4) and A(3)) or (not keys(4)(4) and A(4)) or (not keys(5)(4) and A(5)) or (not keys(6)(4) and A(6)) or (not keys(7)(4) and A(7)));
+	KEYB(5) <= ((keys(0)(5) or A(0)) and (keys(1)(5) or A(1)) and (keys(2)(5) or A(2)) and (keys(3)(5) or A(3)) and (keys(4)(5) or A(4)) and (keys(5)(5) or A(5)) and (keys(6)(5) or A(6)) and (keys(7)(5) or A(7)))
+					when machine_type = '0' else
+					((not keys(0)(5) and A(0)) or (not keys(1)(5) and A(1)) or (not keys(2)(5) and A(2)) or (not keys(3)(5) and A(3)) or (not keys(4)(5) and A(4)) or (not keys(5)(5) and A(5)) or (not keys(6)(5) and A(6)) or (not keys(7)(5) and A(7)));
+	KEYB(6) <= ((keys(0)(6) or A(0)) and (keys(1)(6) or A(1)) and (keys(2)(6) or A(2)) and (keys(3)(6) or A(3)) and (keys(4)(6) or A(4)) and (keys(5)(6) or A(5)) and (keys(6)(6) or A(6)) and (keys(7)(6) or A(7)))
+					when machine_type = '0' else
+					((not keys(0)(6) and A(0)) or (not keys(1)(6) and A(1)) or (not keys(2)(6) and A(2)) or (not keys(3)(6) and A(3)) or (not keys(4)(6) and A(4)) or (not keys(5)(6) and A(5)) or (not keys(6)(6) and A(6)) or (not keys(7)(6) and A(7)));
+	KEYB(7) <= ((keys(0)(7) or A(0)) and (keys(1)(7) or A(1)) and (keys(2)(7) or A(2)) and (keys(3)(7) or A(3)) and (keys(4)(7) or A(4)) and (keys(5)(7) or A(5)) and (keys(6)(7) or A(6)) and (keys(7)(7) or A(7)))
+					when machine_type = '0' else
+					((not keys(0)(7) and A(0)) or (not keys(1)(7) and A(1)) or (not keys(2)(7) and A(2)) or (not keys(3)(7) and A(3)) or (not keys(4)(7) and A(4)) or (not keys(5)(7) and A(5)) or (not keys(6)(7) and A(6)) or (not keys(7)(7) and A(7)));
+
+--C2/C4 keyboard is inverted to that in the C1!
+
+--		KEYB(0) <= ((not keys(0)(0) and A(0)) or (not keys(1)(0) and A(1)) or (not keys(2)(0) and A(2)) or (not keys(3)(0) and A(3)) or (not keys(4)(0) and A(4)) or (not keys(5)(0) and A(5)) or (not keys(6)(0) and A(6)) or (not keys(7)(0) and A(7)));
+--		KEYB(1) <= ((not keys(0)(1) and A(0)) or (not keys(1)(1) and A(1)) or (not keys(2)(1) and A(2)) or (not keys(3)(1) and A(3)) or (not keys(4)(1) and A(4)) or (not keys(5)(1) and A(5)) or (not keys(6)(1) and A(6)) or (not keys(7)(1) and A(7)));
+--		KEYB(2) <= ((not keys(0)(2) and A(0)) or (not keys(1)(2) and A(1)) or (not keys(2)(2) and A(2)) or (not keys(3)(2) and A(3)) or (not keys(4)(2) and A(4)) or (not keys(5)(2) and A(5)) or (not keys(6)(2) and A(6)) or (not keys(7)(2) and A(7)));
+--		KEYB(3) <= ((not keys(0)(3) and A(0)) or (not keys(1)(3) and A(1)) or (not keys(2)(3) and A(2)) or (not keys(3)(3) and A(3)) or (not keys(4)(3) and A(4)) or (not keys(5)(3) and A(5)) or (not keys(6)(3) and A(6)) or (not keys(7)(3) and A(7)));
+--		KEYB(4) <= ((not keys(0)(4) and A(0)) or (not keys(1)(4) and A(1)) or (not keys(2)(4) and A(2)) or (not keys(3)(4) and A(3)) or (not keys(4)(4) and A(4)) or (not keys(5)(4) and A(5)) or (not keys(6)(4) and A(6)) or (not keys(7)(4) and A(7)));
+--		KEYB(5) <= ((not keys(0)(5) and A(0)) or (not keys(1)(5) and A(1)) or (not keys(2)(5) and A(2)) or (not keys(3)(5) and A(3)) or (not keys(4)(5) and A(4)) or (not keys(5)(5) and A(5)) or (not keys(6)(5) and A(6)) or (not keys(7)(5) and A(7)));
+--		KEYB(6) <= ((not keys(0)(6) and A(0)) or (not keys(1)(6) and A(1)) or (not keys(2)(6) and A(2)) or (not keys(3)(6) and A(3)) or (not keys(4)(6) and A(4)) or (not keys(5)(6) and A(5)) or (not keys(6)(6) and A(6)) or (not keys(7)(6) and A(7)));
+--		KEYB(7) <= ((not keys(0)(7) and A(0)) or (not keys(1)(7) and A(1)) or (not keys(2)(7) and A(2)) or (not keys(3)(7) and A(3)) or (not keys(4)(7) and A(4)) or (not keys(5)(7) and A(5)) or (not keys(6)(7) and A(6)) or (not keys(7)(7) and A(7)));
 
 --	KEYB <= keys(0) when A(0) = '0' else
 --		keys(1) when A(1) = '0' else
