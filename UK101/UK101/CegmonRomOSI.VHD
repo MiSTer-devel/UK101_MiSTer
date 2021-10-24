@@ -24,16 +24,16 @@ library ieee;
 	use ieee.numeric_std.all;
 	use ieee.std_logic_unsigned.all;
 
-ENTITY CegmonRom IS
+ENTITY CegmonRomOSI IS
 
 	PORT
 	(
 		address : in std_logic_vector(10 downto 0);
 		q : out std_logic_vector(7 downto 0)
 	);
-END CegmonRom;
+END CegmonRomOSI;
 
-architecture behavior of CegmonRom is
+architecture behavior of CegmonRomOSI is
 type romtable is array (0 to 2047) of std_logic_vector(7 downto 0);
 constant romdata : romtable :=
 (

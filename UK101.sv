@@ -180,9 +180,10 @@ localparam CONF_STR = {
 	//"OCD,Scandoubler Fx,None,HQ2x,CRT 25%,CRT 50%;",
 	"OFG,Scale,Normal,V-Integer,Narrower HV-Integer,Wider HV-Integer;",
 	//"O34,Colours,White on blue,White on black,Green on black,Yellow on black;",
-	"D3O55,Screen resolution,Low,High;",
+	"d5O55,Screen resolution,Low,High;",
 	"-;",
-	"D4O66,Monitor,Cegmon,MonUK02(NewMon);",
+	"H4OLM,Monitor,Cegmon,MonUK02,Wemon;",
+	"h4ONN,Monitor,Cegmon,Synmon;",
 	"-;",
 	"O77,Baud Rate,9600,300;",
 	"OHJ,Clock speed,1Mhz,2Mhz,4Mhz,8Mhz,10Mhz;",
@@ -205,13 +206,13 @@ wire PS2_CLK;
 wire PS2_DAT;
 wire loadFrom = status[3];
 wire resolution;
-wire monitor_type=status[6];
+wire [1:0]monitor_type;
 wire baud_rate=status[7];
 wire machine_type=status[20];
-assign resolution = monitor_type ? 0 : status[5];
+assign resolution = status[5];
 wire forced_scandoubler;
 wire [21:0] gamma_bus;
-
+wire grey_res_menu = (monitor_type==2'b0);
 wire ioctl_download;
 wire ioctl_wr;
 wire [15:0] ioctl_addr;
@@ -230,7 +231,7 @@ hps_io #(.CONF_STR(CONF_STR),.PS2DIV(2000)) hps_io
 	.ps2_kbd_clk_out(PS2_CLK),
 	.ps2_kbd_data_out(PS2_DAT),
 	.forced_scandoubler(forced_scandoubler),
-	.status_menumask({status[20],status[6:3]}),
+	.status_menumask({grey_res_menu, status[20],status[6:3]}),
 	.gamma_bus(gamma_bus),
 	
 	.ioctl_download(ioctl_download),
@@ -290,7 +291,13 @@ begin
 		end
 end
 
-
+always_comb
+begin
+if (machine_type==0)
+	monitor_type=status[22:21];
+	else
+	monitor_type={1'b0,status[23]};
+end
 	
 
 
@@ -331,7 +338,7 @@ uk101 uk101
 	.vblank(vblank),
 	//.colours(colour_scheme),
 	.resolution(resolution),
-	.monitor_type(monitor_type),
+	.monitor_type(status[23:21]),
 	.machine_type(machine_type),
 	.baud_rate(baud_rate),
 	.rxd(UART_RXD),

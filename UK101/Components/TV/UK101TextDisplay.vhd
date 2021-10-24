@@ -28,7 +28,6 @@ entity UK101TextDisplay is
 		clk    	: in  std_logic;
 		ce_pix	: in std_logic; 	
 		resolution	: in std_logic; 
-		monitor_type : in std_logic;
 		r		: out std_logic;
 		g		: out std_logic;
 		b		: out std_logic;

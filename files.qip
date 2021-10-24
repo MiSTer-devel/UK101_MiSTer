@@ -1,3 +1,7 @@
+set_global_assignment -name VHDL_FILE UK101/UK101/WemonRom.VHD
+set_global_assignment -name VHDL_FILE UK101/UK101/SynmonRom.VHD
+set_global_assignment -name VHDL_FILE UK101/UK101/CharRomOSI.VHD
+set_global_assignment -name VHDL_FILE UK101/UK101/CegmonRomOSI.VHD
 set_global_assignment -name QIP_FILE UK101/UK101/BasicRomOSI.qip
 set_global_assignment -name VHDL_FILE UK101/Components/TV/UK101TextDisplay.vhd
 set_global_assignment -name VHDL_FILE UK101/Components/UART/bufferedUART.vhd
