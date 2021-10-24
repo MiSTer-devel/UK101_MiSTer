@@ -212,7 +212,7 @@ wire machine_type=status[20];
 assign resolution = status[5];
 wire forced_scandoubler;
 wire [21:0] gamma_bus;
-wire grey_res_menu = (monitor_type==2'b0);
+wire grey_res_menu = (monitor_type==2'b0 || (machine_type==1'b1 && monitor_type == 2'b1));
 wire ioctl_download;
 wire ioctl_wr;
 wire [15:0] ioctl_addr;
