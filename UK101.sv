@@ -209,7 +209,7 @@ wire resolution;
 wire [1:0]monitor_type;
 wire baud_rate=status[7];
 wire machine_type=status[20];
-assign resolution = status[5];
+//assign resolution = status[5];
 wire forced_scandoubler;
 wire [21:0] gamma_bus;
 wire grey_res_menu = (monitor_type==2'b0 || (machine_type==1'b1 && monitor_type == 2'b1));
@@ -220,6 +220,15 @@ wire [7:0] ioctl_data;
 wire [7:0] ioctl_index;
 wire ioctl_wait;
 
+
+
+always_comb
+begin
+if (machine_type==1'b0 && (monitor_type==2'b01 || monitor_type == 2'b10))
+	resolution = 1'b0;
+else
+	resolution = status[5];
+end
 
 
 hps_io #(.CONF_STR(CONF_STR),.PS2DIV(2000)) hps_io
