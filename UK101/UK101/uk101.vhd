@@ -38,6 +38,7 @@ entity uk101 is
 		resolution	:	in std_logic;
 		--colours		:	in std_logic_vector(1 downto 0);
 		monitor_type : in std_logic_vector(2 downto 0);
+		memory_size : in std_logic_vector(2 downto 0);
 		machine_type	: in std_logic;
 		baud_rate : in std_logic;
 		hblank		:	out std_logic;
@@ -107,6 +108,7 @@ architecture struct of uk101 is
 	signal i_clockThreshold2 : integer range 0 to 25 := 0;
 	signal i_cpuOverclock : integer range 0 to 5 := 0;
 	signal i_monitor_type : integer range 0 to 3 := 0;
+	signal i_memory_size : integer range 0 to 3 := 0;
 
 
 
@@ -127,6 +129,7 @@ begin
 	
 	i_cpuOverclock <= to_integer(unsigned(cpuOverclock));
 	i_monitor_type <= to_integer(unsigned(monitor_type(1 downto 0))) when machine_type='0' else to_integer(unsigned('0' & monitor_type(2 downto 2))) ;
+	i_memory_size <= to_integer(unsigned(memory_size(2 downto 0)));
 	charData <= charDataUK101 when machine_type = '0' else charDataOSI;
 	
 	n_memWR <= not(cpuClock) nand (not n_WR);
@@ -135,11 +138,15 @@ begin
 	n_basRomCS <= '0' when cpuAddress(15 downto 13) = "101" else '1'; --8k
 	n_monitorRomCS	<= '0' when cpuAddress(15 downto 11) = "11111" and machine_type = '0' and i_monitor_type < 2 else --uk101
 							'0' when cpuAddress(15 downto 12) = "1111" and machine_type = '0' and i_monitor_type = 2 else	--uk101 with wemon
-						'0' when cpuAddress(15 downto 11) = "11111" and machine_type = '1' and i_monitor_type = 1  else		-- 2K      $F800-$FFFF  (except $FC00-$FCFF)  C2/C4  
+						'0' when cpuAddress(15 downto 11) = "11111" and machine_type = '1' and i_monitor_type = 1  else		--OSI with Synmon
 						'0' when (cpuAddress(15 downto 11) = "11111" and cpuAddress(11 downto 8) /= "1100") and machine_type = '1' and i_monitor_type = 0  else		-- 2K      $F800-$FFFF  (except $FC00-$FCFF)  C2/C4
 					   '0' when cpuAddress(15 downto 8)  = "11110100" and machine_type = '1' and i_monitor_type = 0 else	   										-- 256byte $F400-$F4FF  (relocated FC00-FCFF block)
 					   '1';
-	n_ramCS <= not(n_dispRamCS and n_basRomCS and n_monitorRomCS and n_aciaCS and n_kbCS);
+	n_ramCS <= not(n_dispRamCS and n_basRomCS and n_monitorRomCS and n_aciaCS and n_kbCS) when i_memory_size = 3 else  --41K
+					'0' when cpuAddress(15 downto 12) = "0000" and i_memory_size = 0 else											--4k
+					'0' when cpuAddress(15 downto 13) = "000"  and i_memory_size = 1 else											--8k
+					'0' when cpuAddress(15) = '0' and i_memory_size = 2																	--32K
+					else '1';
 	n_aciaCS <= '0' when cpuAddress(15 downto 1) = "111100000000000" and machine_type = '0' and i_monitor_type < 2 else
 					'0' when cpuAddress(15 downto 1) = "111000000000000" and machine_type = '0' and i_monitor_type = 2 else
 					'0' when cpuAddress(15 downto 1) = "111111000000000" and machine_type = '1' else '1';
@@ -147,12 +154,22 @@ begin
 
  
 	cpuDataIn <=
-		    -- CEGMON PATCH TO CORRECT AUTO-REPEAT IN FAST MODE
-		x"A0" when cpuAddress = "1111110011100000" and i_cpuOverclock = 4 else -- Address = FCE0 and fastMode = 1 : CHANGE REPEAT RATE LOOP VALUE (was $10)
-		x"80" when cpuAddress = "1111110011100000" and i_cpuOverclock = 3 else 
-		x"40" when cpuAddress = "1111110011100000" and i_cpuOverclock = 2 else 	
-		x"20" when cpuAddress = "1111110011100000" and i_cpuOverclock = 1 else 	
-		x"10" when cpuAddress = "1111110011100000" and i_cpuOverclock = 0 else 		
+		    -- CEGMON PATCH TO CORRECT AUTO-REPEAT IN FAST MODE(UK101)
+		x"A0" when cpuAddress = X"FCE0" and i_cpuOverclock = 4 and machine_type = '0' else -- Address = FCE0 and fastMode = 1 : CHANGE REPEAT RATE LOOP VALUE (was $10)
+		x"80" when cpuAddress = X"FCE0" and i_cpuOverclock = 3 and machine_type = '0' else 
+		x"40" when cpuAddress = X"FCE0" and i_cpuOverclock = 2 and machine_type = '0' else 	
+		x"20" when cpuAddress = X"FCE0" and i_cpuOverclock = 1 and machine_type = '0' else 	
+		x"10" when cpuAddress = X"FCE0" and i_cpuOverclock = 0 and machine_type = '0' else 	
+	
+		 -- CEGMON PATCH TO CORRECT AUTO-REPEAT IN FAST MODE(OSI)
+		x"A0" when cpuAddress = X"F4E0" and i_cpuOverclock = 4 and machine_type = '1' else -- Address = F4E0 and fastMode = 1 : CHANGE REPEAT RATE LOOP VALUE (was $10)
+		x"80" when cpuAddress = X"F4E0" and i_cpuOverclock = 3 and machine_type = '1' else 
+		x"40" when cpuAddress = X"F4E0" and i_cpuOverclock = 2 and machine_type = '1' else 	
+		x"20" when cpuAddress = X"F4E0" and i_cpuOverclock = 1 and machine_type = '1' else 	
+		x"10" when cpuAddress = X"F4E0" and i_cpuOverclock = 0 and machine_type = '1' else 		
+		
+		
+		
 		-- CEGMON PATCH FOR 64x32 SCREEN
 		x"3F" when cpuAddress = x"FBBC" and resolution='1' and i_monitor_type = 0 and machine_type = '0' else -- CEGMON SWIDTH (was $47)
 		x"00" when cpuAddress = x"FBBD" and resolution='1' and i_monitor_type = 0 and machine_type = '0' else -- CEGMON TOP L (was $0C (1st line) or $8C (3rd line))
@@ -230,7 +247,7 @@ begin
 		wren => not(n_memWR or n_ramCS),
 		q => ramDataOut
 	);
-	
+		
 	u4: entity work.CegmonRom
 	port map
 	(

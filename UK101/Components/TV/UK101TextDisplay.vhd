@@ -70,6 +70,7 @@ architecture rtl of UK101TextDisplay is
 	
 	signal	rightBorder: integer range 0 to 550 := 0; 
 	signal 	totalPixels : integer range 0 to 550 := 0;
+	signal 	hsyncCount: integer range 0 to 50 := 0;
 
 
 begin
@@ -100,6 +101,8 @@ begin
 					else 534;
 	rightBorder <= 262 when machine_type = '1' and resolution = '0' 
 					else 518;
+   hsyncCount <= 20 when machine_type = '1' and resolution = '0'
+					else 39;
 	
 	
 	PROCESS (clk)
@@ -155,7 +158,7 @@ begin
 				end if;
 
 			END IF;
-			if horizCount < 39 then
+			if horizCount < hsyncCount then
 				hSync <= '0';
 			else
 				hSync <= '1';
