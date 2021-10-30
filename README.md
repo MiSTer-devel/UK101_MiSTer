@@ -14,8 +14,8 @@ Basic programs can be loaded from text files, or via the UART at 9600 baud. Text
 
 [Grant Searle's original UK101 FPGA site](http://searle.x10host.com/uk101FPGA/index.html)
 
-#### Acknowledgements
-Many thanks to Leslie Ayling for his help in adding the OSI mode to the core.
+### Acknowledgements
+Many thanks to alanswx for the original text file loading code, and to Leslie Ayling for his help in adding the OSI mode to the core.
 
 ### Licenses 
 
