@@ -15,9 +15,6 @@
 -- Grant Searle
 -- eMail address available on my main web page link above.
 
--- CEGMON C2/C4 version by Leslie Ayling
--- $FC00 block relocated to $F400
--- Register buf-fix included ($E1 -> $E4)
 
 library ieee;
 	use ieee.std_logic_1164.all;
