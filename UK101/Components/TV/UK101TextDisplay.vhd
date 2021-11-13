@@ -69,8 +69,10 @@ architecture rtl of UK101TextDisplay is
 	signal 	chartemp : std_LOGIC_VECTOR(7 downto 0);
 	
 	signal	rightBorder: integer range 0 to 550 := 0; 
+	signal	leftBorder: integer range 0 to 55 := 0; 
+	signal topBorder: integer range 0 to 256 := 0; 
+	signal bottomBorder: integer range 0 to 300 := 0; 
 	signal 	totalPixels : integer range 0 to 550 := 0;
-	signal 	hsyncCount: integer range 0 to 50 := 0;
 
 
 begin
@@ -97,12 +99,13 @@ begin
 		charIn(i) <= charData(i) when machine_type='0' else charData(7-i);
 	end generate;
 	
-	totalPixels <= 270 when machine_type = '1' and resolution = '0' 
-					else 534;
+	totalPixels <= 267 when machine_type = '1' and resolution = '0' 
+					else 530;
 	rightBorder <= 262 when machine_type = '1' and resolution = '0' 
 					else 518;
-   hsyncCount <= 20 when machine_type = '1' and resolution = '0'
-					else 39;
+	leftBorder <= 7;
+	topBorder <= 37;		
+	bottomBorder <= 292;						
 	
 	
 	PROCESS (clk)
@@ -123,7 +126,7 @@ begin
 			IF horizCount < totalPixels THEN
 				horizCount <= horizCount + 1;
 --				if (horizCount < 600) or (horizCount > 3000) then
-				if (horizCount < 7) or (horizCount > rightBorder) then
+				if (horizCount < leftBorder) or (horizCount > rightBorder) then
 					hActive <= '0';
 					charHoriz <= (others => '0');
 				else
@@ -138,7 +141,7 @@ begin
 					vertLineCount <= (others => '0');
 				else
 --					if vertLineCount < 42 or vertLineCount > 297 then
-					if vertLineCount < 37 or vertLineCount > 292 then
+					if vertLineCount < topBorder or vertLineCount > bottomBorder then
 						vActive <= '0';
 						charVert <= (others => '0');
 						charScanLine <= (others => '0');
@@ -148,7 +151,7 @@ begin
 							charScanLine <= (others => '0');
 							charVert <= charVert+1;
 						else
-							if vertLineCount /= 37 then
+							if vertLineCount /= topBorder then
 								charScanLine <= charScanLine+1;
 							end if;
 						end if;
@@ -158,7 +161,7 @@ begin
 				end if;
 
 			END IF;
-			if horizCount < hsyncCount then
+			if horizCount < leftBorder then
 				hSync <= '0';
 			else
 				hSync <= '1';
