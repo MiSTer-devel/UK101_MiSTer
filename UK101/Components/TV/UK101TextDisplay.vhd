@@ -36,7 +36,7 @@ entity UK101TextDisplay is
 		vsync_out  	: out  std_logic;
 		hblank_out  	: out  std_logic;
 		vblank_out 	: out  std_logic;
-		machine_type : in std_logic
+		machine_type : in integer range 0 to 5
    );
 end UK101TextDisplay;
 
@@ -88,20 +88,21 @@ begin
 	b <= video;
 	sync <= hSync and vSync;
 	
-	dispAddr <= charVert & charHoriz;
-	charAddr <= dispData & charScanLine(3 DOWNTO 1) when resolution = '0' and machine_type = '0'
+	dispAddr <= charVert & charHoriz when machine_type = 0 or machine_type = 1 
+	else '0' & charVert & charHoriz(4 downto 0);
+	charAddr <= dispData & charScanLine(3 DOWNTO 1) when resolution = '0' and machine_type = 0
 					else dispData & charScanLine(2 downto 0);
-	charHeight(3 downto 0)<= "1111" when resolution = '0' and machine_type= '0' else "0111";
+	charHeight(3 downto 0)<= "1111" when resolution = '0' and machine_type= 0 else "0111";
 
 	
 	--charIn <= charData(7 downto 0) when machine_type = '0' else charData(0 to 7);
 	gen: for i in 0 to 7 generate
-		charIn(i) <= charData(i) when machine_type='0' else charData(7-i);
+		charIn(i) <= charData(i) when machine_type=0 else charData(7-i);
 	end generate;
 	
-	totalPixels <= 267 when machine_type = '1' and resolution = '0' 
+	totalPixels <= 267 when (machine_type = 1 or machine_type = 2) and resolution = '0' 
 					else 530;
-	rightBorder <= 262 when machine_type = '1' and resolution = '0' 
+	rightBorder <= 262 when (machine_type = 1 or machine_type = 2) and resolution = '0' 
 					else 518;
 	leftBorder <= 7;
 	topBorder <= 37;		

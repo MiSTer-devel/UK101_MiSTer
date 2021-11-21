@@ -181,12 +181,12 @@ localparam CONF_STR = {
 	"OCD,Scandoubler Fx,None,HQ2x,CRT 25%,CRT 50%;",
 	"OFG,Scale,Normal,V-Integer,Narrower HV-Integer,Wider HV-Integer;",
 	//"O34,Colours,White on blue,White on black,Green on black,Yellow on black;",
-	"d5O55,Screen resolution,Low,High;",
+	"d5D6O55,Screen resolution,Low,High;",
 	"-;",
-	"OKK,Machine,UK101,OSI;",
+	"ORS,Machine,UK101,OSI C2P,OSI C1P;",
 	"OHJ,Clock speed,1Mhz,2Mhz,4Mhz,8Mhz,10Mhz;",
 	"OOQ,Memory Size,4K,8K,32K,41K;",
-	"H4OLM,Monitor,Cegmon,MonUK02,Wemon;",
+	"D6H4OLM,Monitor,Cegmon,MonUK02,Wemon;",
 	"h4ONN,Monitor,Cegmon,Synmon;",
 	"-;",
 	"-;",
@@ -209,7 +209,7 @@ wire loadFrom = status[3];
 wire resolution;
 wire [1:0]monitor_type;
 wire baud_rate=status[7];
-wire machine_type=status[20];
+wire [1:0] machine_type=status[28:27];
 //assign resolution = status[5];
 wire forced_scandoubler;
 wire [21:0] gamma_bus;
@@ -225,11 +225,14 @@ wire ioctl_wait;
 
 always_comb
 begin
-if (machine_type==1'b0 && (monitor_type==2'b01 || monitor_type == 2'b10))
+if (machine_type==2'b00 && (monitor_type==2'b01 || monitor_type == 2'b10))
+	resolution = 1'b0;
+else if (machine_type == 2'b10)
 	resolution = 1'b0;
 else
 	resolution = status[5];
 end
+
 
 
 hps_io #(.CONF_STR(CONF_STR),.PS2DIV(2000)) hps_io
@@ -241,7 +244,7 @@ hps_io #(.CONF_STR(CONF_STR),.PS2DIV(2000)) hps_io
 	.ps2_kbd_clk_out(PS2_CLK),
 	.ps2_kbd_data_out(PS2_DAT),
 	.forced_scandoubler(forced_scandoubler),
-	.status_menumask({grey_res_menu, status[20],status[6:3]}),
+	.status_menumask({status[28],grey_res_menu, status[27],status[6:3]}),
 	.gamma_bus(gamma_bus),
 	
 	.ioctl_download(ioctl_download),
@@ -349,7 +352,7 @@ uk101 uk101
 	//.colours(colour_scheme),
 	.resolution(resolution),
 	.monitor_type(status[23:21]),
-	.machine_type(machine_type),
+	.machine_type(status[28:27]),
 	.memory_size(status[26:24]),
 	.baud_rate(baud_rate),
 	.rxd(UART_RXD),
