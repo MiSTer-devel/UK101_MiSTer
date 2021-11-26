@@ -35,7 +35,8 @@ entity uk101 is
 		r				:	out std_logic;
 		g				:	out std_logic;
 		b				:	out std_logic;
-		resolution	:	in std_logic;
+		screen_mode	:	in std_logic_vector(1 downto 0);
+		actual_res	:	out std_logic;
 		--colours		:	in std_logic_vector(1 downto 0);
 		monitor_type : in std_logic_vector(2 downto 0);
 		memory_size : in std_logic_vector(2 downto 0);
@@ -79,6 +80,7 @@ architecture struct of uk101 is
 	signal n_monitorRomCS : std_logic;
 	signal n_aciaCS		: std_logic;
 	signal n_kbCS			: std_logic;
+	signal n_iocs			: std_logic;
 	
 	signal dispAddrB 		: std_logic_vector(10 downto 0);
 	signal dispRamDataOutA : std_logic_vector(7 downto 0);
@@ -111,11 +113,13 @@ architecture struct of uk101 is
 	signal i_monitor_type : integer range 0 to 3 := 0;
 	signal i_memory_size : integer range 0 to 3 := 0;
 	signal i_machine_type : integer range 0 to 3 := 0;
-
-
+	signal latchedbits : std_logic_vector(7 downto 0);
+	signal resolution : std_logic;
 
 begin
 
+	resolution <= latchedbits(0) when i_machine_type=1 and screen_mode(1)='1' else screen_mode(0);
+	actual_res <= resolution;
 	i_clockThreshold1 <= 49 when i_cpuOverclock = 0 else 	--1Mhz
 								23 when i_cpuOverclock = 1 else	--2 Mhz
 								11 when i_cpuOverclock = 2 else	--4 Mhz
@@ -147,6 +151,7 @@ begin
 						'0' when (cpuAddress(15 downto 11) = "11111" and cpuAddress(11 downto 8) /= "1100") and i_machine_type = 1 and i_monitor_type = 0  else		-- 2K      $F800-$FFFF  (except $FC00-$FCFF)  C2/C4
 					   '0' when cpuAddress(15 downto 8)  = "11110100" and i_machine_type = 1 and i_monitor_type = 0 else	   										-- 256byte $F400-$F4FF  (relocated FC00-FCFF block)
 					   '1';
+	n_iocs <= '0' when cpuAddress(15 downto 0 ) = X"DE00" and i_machine_type = 1 else '1'; 						
 	n_ramCS <= not(n_dispRamCS and n_basRomCS and n_monitorRomCS and n_aciaCS and n_kbCS) when i_memory_size = 3 else  --41K
 					'0' when cpuAddress(15 downto 12) = "0000" and i_memory_size = 0 else											--4k
 					'0' when cpuAddress(15 downto 13) = "000"  and i_memory_size = 1 else											--8k
@@ -176,28 +181,28 @@ begin
 		
 		
 		-- CEGMON PATCH FOR 64x32 SCREEN
-		x"3F" when cpuAddress = x"FBBC" and resolution='1' and i_monitor_type = 0 and i_machine_type = 0 else -- CEGMON SWIDTH (was $47)
-		x"00" when cpuAddress = x"FBBD" and resolution='1' and i_monitor_type = 0 and i_machine_type = 0 else -- CEGMON TOP L (was $0C (1st line) or $8C (3rd line))
-		x"BF" when cpuAddress = x"FBBF" and resolution='1' and i_monitor_type = 0 and i_machine_type = 0 else -- CEGMON BASE L (was $CC)
-		x"D7" when cpuAddress = x"FBC0" and resolution='1' and i_monitor_type = 0 and i_machine_type = 0 else -- CEGMON BASE H (was $D3)
-		x"00" when cpuAddress = x"FBC2" and resolution='1' and i_monitor_type = 0 and i_machine_type = 0 else -- CEGMON STARTUP TOP L (was $0C (1st line) or $8C (3rd line))
-		x"00" when cpuAddress = x"FBC5" and resolution='1' and i_monitor_type = 0 and i_machine_type = 0 else -- CEGMON STARTUP TOP L (was $0C (1st line) or $8C (3rd line))
-		x"00" when cpuAddress = x"FBCB" and resolution='1' and i_monitor_type = 0 and i_machine_type = 0 else -- CEGMON STARTUP TOP L (was $0C (1st line) or $8C (3rd line))
-		x"10" when cpuAddress = x"FE62" and resolution='1' and i_monitor_type = 0 and i_machine_type = 0 else -- CEGMON CLR SCREEN SIZE (was $08)
-		x"D8" when cpuAddress = x"FB8B" and resolution='1' and i_monitor_type = 0 and i_machine_type = 0 else -- CEGMON SCREEN BOTTOM H (was $D4) - Part of CTRL-F code
-		x"D7" when cpuAddress = x"FE3B" and resolution='1' and i_monitor_type = 0 and i_machine_type = 0 else -- CEGMON SCREEN BOTTOM H - 1 (was $D3) - Part of CTRL-A code
+		x"3F" when cpuAddress = x"FBBC" and resolution='1' and screen_mode(1)='0' and i_monitor_type = 0 and i_machine_type = 0 else -- CEGMON SWIDTH (was $47)
+		x"00" when cpuAddress = x"FBBD" and resolution='1' and screen_mode(1)='0' and i_monitor_type = 0 and i_machine_type = 0 else -- CEGMON TOP L (was $0C (1st line) or $8C (3rd line))
+		x"BF" when cpuAddress = x"FBBF" and resolution='1' and screen_mode(1)='0' and i_monitor_type = 0 and i_machine_type = 0 else -- CEGMON BASE L (was $CC)
+		x"D7" when cpuAddress = x"FBC0" and resolution='1' and screen_mode(1)='0' and i_monitor_type = 0 and i_machine_type = 0 else -- CEGMON BASE H (was $D3)
+		x"00" when cpuAddress = x"FBC2" and resolution='1' and screen_mode(1)='0' and i_monitor_type = 0 and i_machine_type = 0 else -- CEGMON STARTUP TOP L (was $0C (1st line) or $8C (3rd line))
+		x"00" when cpuAddress = x"FBC5" and resolution='1' and screen_mode(1)='0' and i_monitor_type = 0 and i_machine_type = 0 else -- CEGMON STARTUP TOP L (was $0C (1st line) or $8C (3rd line))
+		x"00" when cpuAddress = x"FBCB" and resolution='1' and screen_mode(1)='0' and i_monitor_type = 0 and i_machine_type = 0 else -- CEGMON STARTUP TOP L (was $0C (1st line) or $8C (3rd line))
+		x"10" when cpuAddress = x"FE62" and resolution='1' and screen_mode(1)='0' and i_monitor_type = 0 and i_machine_type = 0 else -- CEGMON CLR SCREEN SIZE (was $08)
+		x"D8" when cpuAddress = x"FB8B" and resolution='1' and screen_mode(1)='0' and i_monitor_type = 0 and i_machine_type = 0 else -- CEGMON SCREEN BOTTOM H (was $D4) - Part of CTRL-F code
+		x"D7" when cpuAddress = x"FE3B" and resolution='1' and screen_mode(1)='0' and i_monitor_type = 0 and i_machine_type = 0 else -- CEGMON SCREEN BOTTOM H - 1 (was $D3) - Part of CTRL-A code
 		
-		x"2F" when cpuAddress = x"FBBC" and resolution='0' and i_monitor_type = 0 and i_machine_type = 0 else -- CEGMON SWIDTH (was $47)
-		x"1F" when cpuAddress = x"FBBC" and resolution='0' and i_monitor_type = 0 and i_machine_type = 1 else -- CEGMON SWIDTH (was $47)
-		x"00" when cpuAddress = x"FBBD" and resolution='0' and i_monitor_type = 0 and i_machine_type = 0 else -- CEGMON TOP L (was $0C (1st line) or $8C (3rd line))
-		x"85" when cpuAddress = x"FBBF" and resolution='0' and i_monitor_type = 0 and i_machine_type = 0 else -- CEGMON BASE L (was $CC)
-		x"D3" when cpuAddress = x"FBC0" and resolution='0' and i_monitor_type = 0 and i_machine_type = 0 else -- CEGMON BASE H (was $D3)
-		x"00" when cpuAddress = x"FBC2" and resolution='0' and i_monitor_type = 0 and i_machine_type = 0 else -- CEGMON STARTUP TOP L (was $0C (1st line) or $8C (3rd line))
-		x"00" when cpuAddress = x"FBC5" and resolution='0' and i_monitor_type = 0 and i_machine_type = 0 else -- CEGMON STARTUP TOP L (was $0C (1st line) or $8C (3rd line))
-		x"00" when cpuAddress = x"FBCB" and resolution='0' and i_monitor_type = 0 and i_machine_type = 0 else -- CEGMON STARTUP TOP L (was $0C (1st line) or $8C (3rd line))
-		x"08" when cpuAddress = x"FE62" and resolution='0' and i_monitor_type = 0 and i_machine_type = 0 else -- CEGMON CLR SCREEN SIZE (was $08)
-		x"D4" when cpuAddress = x"FB8B" and resolution='0' and i_monitor_type = 0 and i_machine_type = 0 else -- CEGMON SCREEN BOTTOM H (was $D4) - Part of CTRL-F code
-		x"D3" when cpuAddress = x"FE3B" and resolution='0' and i_monitor_type = 0 and i_machine_type = 0 else -- CEGMON SCREEN BOTTOM H - 1 (was $D3) - Part of CTRL-A code
+		x"2F" when cpuAddress = x"FBBC" and resolution='0' and screen_mode(1)='0' and i_monitor_type = 0 and i_machine_type = 0 else -- CEGMON SWIDTH (was $47)
+		x"1F" when cpuAddress = x"FBBC" and resolution='0' and screen_mode(1)='0' and i_monitor_type = 0 and i_machine_type = 1 else -- CEGMON SWIDTH (was $47)
+		x"00" when cpuAddress = x"FBBD" and resolution='0' and screen_mode(1)='0' and i_monitor_type = 0 and i_machine_type = 0 else -- CEGMON TOP L (was $0C (1st line) or $8C (3rd line))
+		x"85" when cpuAddress = x"FBBF" and resolution='0' and screen_mode(1)='0' and i_monitor_type = 0 and i_machine_type = 0 else -- CEGMON BASE L (was $CC)
+		x"D3" when cpuAddress = x"FBC0" and resolution='0' and screen_mode(1)='0' and i_monitor_type = 0 and i_machine_type = 0 else -- CEGMON BASE H (was $D3)
+		x"00" when cpuAddress = x"FBC2" and resolution='0' and screen_mode(1)='0' and i_monitor_type = 0 and i_machine_type = 0 else -- CEGMON STARTUP TOP L (was $0C (1st line) or $8C (3rd line))
+		x"00" when cpuAddress = x"FBC5" and resolution='0' and screen_mode(1)='0' and i_monitor_type = 0 and i_machine_type = 0 else -- CEGMON STARTUP TOP L (was $0C (1st line) or $8C (3rd line))
+		x"00" when cpuAddress = x"FBCB" and resolution='0' and screen_mode(1)='0' and i_monitor_type = 0 and i_machine_type = 0 else -- CEGMON STARTUP TOP L (was $0C (1st line) or $8C (3rd line))
+		x"08" when cpuAddress = x"FE62" and resolution='0' and screen_mode(1)='0' and i_monitor_type = 0 and i_machine_type = 0 else -- CEGMON CLR SCREEN SIZE (was $08)
+		x"D4" when cpuAddress = x"FB8B" and resolution='0' and screen_mode(1)='0' and i_monitor_type = 0 and i_machine_type = 0 else -- CEGMON SCREEN BOTTOM H (was $D4) - Part of CTRL-F code
+		x"D3" when cpuAddress = x"FE3B" and resolution='0' and screen_mode(1)='0' and i_monitor_type = 0 and i_machine_type = 0 else -- CEGMON SCREEN BOTTOM H - 1 (was $D3) - Part of CTRL-A code
 		basRomData when n_basRomCS = '0' and i_machine_type = 0 else
 		basRomDataOSI when n_basRomCS = '0' and (i_machine_type = 1 or i_machine_type = 2) else
 		monitorRomData when n_monitorRomCS = '0' and i_machine_type = 0 and i_monitor_type = 0 else
@@ -409,6 +414,16 @@ begin
 		A	=> kbRowSel,
 		KEYB	=> kbReadData,
 		machine_type => i_machine_type
+	);
+	
+	
+	DisplayRegister	:	entity work.OutLatch
+	port map (
+		dataIn	=> cpuDataOut,
+		clock		=> clk,
+		load		=> n_iocs,
+		clear		=> n_reset,
+		latchOut	=> latchedbits
 	);
 	
 	process (n_kbCS,n_memWR)

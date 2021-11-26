@@ -1,3 +1,4 @@
+set_global_assignment -name VHDL_FILE UK101/UK101/outlatch.vhd
 set_global_assignment -name VHDL_FILE UK101/UK101/CegmonRomC1P.VHD
 set_global_assignment -name VHDL_FILE UK101/UK101/WemonRom.VHD
 set_global_assignment -name VHDL_FILE UK101/UK101/SynmonRom.VHD

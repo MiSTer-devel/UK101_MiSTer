@@ -181,7 +181,8 @@ localparam CONF_STR = {
 	"OCD,Scandoubler Fx,None,HQ2x,CRT 25%,CRT 50%;",
 	"OFG,Scale,Normal,V-Integer,Narrower HV-Integer,Wider HV-Integer;",
 	//"O34,Colours,White on blue,White on black,Green on black,Yellow on black;",
-	"d5D6O55,Screen resolution,Low,High;",
+	"H4d5D6O4,Screen resolution,Low,High;",
+	"h4d5D6O56,Screen resolution,Low,High,Auto;",
 	"-;",
 	"ORS,Machine,UK101,OSI C2P,OSI C1P;",
 	"OHJ,Clock speed,1Mhz,2Mhz,4Mhz,8Mhz,10Mhz;",
@@ -206,7 +207,7 @@ wire [31:0] status;
 wire PS2_CLK;
 wire PS2_DAT;
 wire loadFrom = status[3];
-wire resolution;
+wire [1:0]resolution;
 wire [1:0]monitor_type;
 wire baud_rate=status[7];
 wire [1:0] machine_type=status[28:27];
@@ -226,11 +227,13 @@ wire ioctl_wait;
 always_comb
 begin
 if (machine_type==2'b00 && (monitor_type==2'b01 || monitor_type == 2'b10))
-	resolution = 1'b0;
+	resolution = 2'b00;
 else if (machine_type == 2'b10)
-	resolution = 1'b0;
+	resolution = 2'b00;
+else if (machine_type == 2'b01)
+	resolution = status[6:5];
 else
-	resolution = status[5];
+	resolution = {1'b0,status[4]};
 end
 
 
@@ -297,7 +300,7 @@ begin
 		ce_pix_count = 5;
 	else
 		begin
-			if (resolution == 1'b0)
+			if (actual_res == 1'b0)
 				ce_pix_count = 11;
 			else
 				ce_pix_count = 5;
@@ -332,6 +335,7 @@ wire [1:0] scale = status[13:12];
 assign VGA_SL = scale ? scale - 1'd1 : 2'd0;
 //assign VGA_SL=sl[1:0];
 assign VGA_F1 = 0;
+wire actual_res;
 
 uk101 uk101
 (
@@ -350,7 +354,8 @@ uk101 uk101
 	.hblank(hblank),
 	.vblank(vblank),
 	//.colours(colour_scheme),
-	.resolution(resolution),
+	.screen_mode(resolution),
+	.actual_res(actual_res),
 	.monitor_type(status[23:21]),
 	.machine_type(status[28:27]),
 	.memory_size(status[26:24]),
