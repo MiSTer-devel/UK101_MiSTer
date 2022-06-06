@@ -174,24 +174,24 @@ localparam CONF_STR = {
 	"UK101;;",
 	"-;",
 	"D0F,TXTBASLOD,Load Ascii;",
-	"O33,Load programs from,File,UART;",
-	"O77,Baud Rate,9600,300;",
+	"O[3],Load programs from,File,UART;",
+	"O[7],Baud Rate,9600,300;",
 	"-;",
-	"O89,Aspect ratio,Original,Full Screen,[ARC1],[ARC2];",
-	"OCD,Scandoubler Fx,None,HQ2x,CRT 25%,CRT 50%;",
-	"OFG,Scale,Normal,V-Integer,Narrower HV-Integer,Wider HV-Integer;",
+	"O[9:8],Aspect ratio,Original,Full Screen,[ARC1],[ARC2];",
+	"O[13:12],Scandoubler Fx,None,HQ2x,CRT 25%,CRT 50%;",
+	"O[16:15],Scale,Normal,V-Integer,Narrower HV-Integer,Wider HV-Integer;",
 	//"O34,Colours,White on blue,White on black,Green on black,Yellow on black;",
 	"H4d5D6O4,Screen resolution,Low,High;",
 	"h4d5D6O56,Screen resolution,Low,High,Auto;",
 	"-;",
-	"ORS,Machine,UK101,OSI C2P,OSI C1P;",
-	"OHJ,Clock speed,1Mhz,2Mhz,4Mhz,8Mhz,10Mhz;",
-	"OOQ,Memory Size,4K,8K,32K,41K;",
-	"D6H4OLM,Monitor,Cegmon,MonUK02,Wemon;",
-	"h4ONN,Monitor,Cegmon,Synmon;",
+	"O[28:27],Machine,UK101,OSI C2P,OSI C1P;",
+	"O[19:17],Clock speed,1Mhz,2Mhz,4Mhz,8Mhz,10Mhz;",
+	"O[26:24],Memory Size,4K,8K,32K,41K;",
+	"D6H4O[22:21],Monitor,Cegmon,MonUK02,Wemon;",
+	"h4O[23],Monitor,Cegmon,Synmon;",
 	"-;",
 	"-;",
-	"RA,Reset;",
+	"R[10],Reset;",
 	"-;",
 	"-;",
 	"V,v",`BUILD_DATE
@@ -203,7 +203,7 @@ localparam CONF_STR = {
 // HPS is the module that communicates between the linux and fpga
 //
 wire  [1:0] buttons;
-wire [31:0] status;
+wire [127:0] status;
 wire PS2_CLK;
 wire PS2_DAT;
 wire loadFrom = status[3];
