@@ -88,11 +88,20 @@ begin
 	b <= video;
 	sync <= hSync and vSync;
 	
-	dispAddr <= charVert & charHoriz when machine_type = 0 or machine_type = 1 
+	-- C1P "64x16" mode (Step 4f): machine_type=2 with resolution='1' reuses
+	-- UK101's own 48x16-ish mechanism (double-height char cells over the same
+	-- 8-line CharRomOSI font, full 6-bit charHoriz addressing instead of the
+	-- 5-bit/32-col truncation the existing C1P modes use) rather than a new
+	-- geometry. machine_type=2's OTHER resolution value ('0', the existing
+	-- default) is untouched - still 32-col addressing, still 8 scanlines/char.
+	dispAddr <= charVert & charHoriz when machine_type = 0 or machine_type = 1
+					or (machine_type = 2 and resolution = '1')
 	else '0' & charVert & charHoriz(4 downto 0);
-	charAddr <= dispData & charScanLine(3 DOWNTO 1) when resolution = '0' and machine_type = 0
+	charAddr <= dispData & charScanLine(3 DOWNTO 1) when (resolution = '0' and machine_type = 0)
+					or (resolution = '1' and machine_type = 2)
 					else dispData & charScanLine(2 downto 0);
-	charHeight(3 downto 0)<= "1111" when resolution = '0' and machine_type= 0 else "0111";
+	charHeight(3 downto 0)<= "1111" when (resolution = '0' and machine_type = 0)
+					or (resolution = '1' and machine_type = 2) else "0111";
 
 	
 	--charIn <= charData(7 downto 0) when machine_type = '0' else charData(0 to 7);

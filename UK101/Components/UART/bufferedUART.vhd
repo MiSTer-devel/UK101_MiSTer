@@ -40,7 +40,15 @@ entity bufferedUART is
 		ioctl_wr : in std_logic;
 		ioctl_data : in std_logic_vector(7 downto 0);
       ioctl_addr :  in std_logic_vector(15 downto 0);
-		loadFrom : in std_logic
+		loadFrom : in std_logic;
+
+		-- SAVE capture: byte written by the CPU to the ACIA data register
+		-- while loadFrom='0' (File mode). save_strobe TOGGLES (not a pulse)
+		-- on each new byte, so the consumer can synchronize across clock
+		-- domains with an edge detector rather than trying to catch a
+		-- single-cycle pulse generated on the (much slower) CPU clock.
+		save_data   : out std_logic_vector(7 downto 0);
+		save_strobe : out std_logic
 
    );
 end bufferedUART;
@@ -53,7 +61,14 @@ architecture rtl of bufferedUART is
    signal in_dl : std_logic;
 	signal ascii_rdy : std_logic;
 	signal w_data_ready : std_logic;
-	signal i_outCounter  : integer range 0 to 65535 := 0;
+	-- Range extends one past the max array index (65535) so this can park at
+	-- 65536 ("one past the last byte") for a full 64K file without wrapping,
+	-- exactly like it already parks at (i_ascii_last_byte+1) for any smaller
+	-- file. Without the extra headroom, incrementing past 65535 wraps to 0,
+	-- and since the read guard below only checks i_outCounter <= i_ascii_last_byte,
+	-- a wrapped 0 satisfies it again and playback loops back to the start
+	-- instead of stopping - only observable with a genuinely full 64K file.
+	signal i_outCounter  : integer range 0 to 65536 := 0;
 	signal i_ascii_last_byte : integer range 0 to 65535 := 0;
 	signal i_ioctl_addr : integer range 0 to 65535 := 0;
 	signal prev_clk : std_logic;
@@ -94,8 +109,14 @@ architecture rtl of bufferedUART is
 	signal rxBuffCount: integer range 0 to 63 :=0;
 	signal fileOut: std_logic_vector (7 downto 0);
 	signal uartOut: std_logic_vector (7 downto 0);
-	
+
+	signal i_save_byte : std_logic_vector(7 downto 0);
+	signal i_save_toggle : std_logic := '0';
+
 begin
+
+	save_data <= i_save_byte;
+	save_strobe <= i_save_toggle;
 
 		i_ioctl_addr <= to_integer(unsigned(ioctl_addr));
 		dataOut <= fileOut when loadFrom = '0' else uartOut;
@@ -149,14 +170,20 @@ begin
 					end if;
 	
 		
-					if n_rd = '0' and in_dl = '1' then	
-						if regSel = '1' then
-					
-									fileOut <= ascii(7 downto 0);
-
-									ascii_rdy <= '0';
-						else
+					if n_rd = '0' then
+						if regSel = '0' then
+									-- Status register must always be readable, even with no
+									-- LOAD active (in_dl='0'). SAVE mounts its file via the
+									-- separate SD-image path, which never sets in_dl, yet
+									-- BASIC's serial output routine polls TDRE (statusReg bit1,
+									-- hardwired '1' in File mode) before every byte. Gating this
+									-- read on in_dl meant the CPU saw a stale fileOut instead;
+									-- if that stale value had bit1=0 the SAVE loop spun forever
+									-- (intermittent "SAVE hangs, needs reset").
 									fileout<= statusReg;
+						elsif in_dl = '1' then
+									fileOut <= ascii(7 downto 0);
+									ascii_rdy <= '0';
 						end if;
 					end if;
 				prev_clk <= n_rd;
@@ -203,6 +230,21 @@ begin
 			end if;
 		end if;
 		end if;
+	end process;
+
+	-- SAVE capture: mirror of the process above, for File mode (loadFrom='0').
+	-- BASIC's SAVE writes to the ACIA data register the same way it would to
+	-- a real UART; here we just record each byte instead of transmitting it.
+	process( n_wr )
+	begin
+	if loadFrom = '0' then
+		if rising_edge(n_wr) then
+			if regSel='1' then
+				i_save_byte <= dataIn;
+				i_save_toggle <= not i_save_toggle;
+			end if;
+		end if;
+	end if;
 	end process;
 
 	process( rxClock , reset )

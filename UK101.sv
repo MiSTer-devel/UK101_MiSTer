@@ -20,123 +20,7 @@
 
 module emu
 (
-	//Master input clock
-	input         CLK_50M,
-
-	//Async reset from top-level module.
-	//Can be used as initial reset.
-	input         RESET,
-
-	//Must be passed to hps_io module
-	inout  [48:0] HPS_BUS,
-
-	//Base video clock. Usually equals to CLK_SYS.
-	output        CLK_VIDEO,
-
-	//Multiple resolutions are supported using different CE_PIXEL rates.
-	//Must be based on CLK_VIDEO
-	output        CE_PIXEL,
-
-	//Video aspect ratio for HDMI. Most retro systems have ratio 4:3.
-	//if VIDEO_[12] or VIDEO_ARY[12] is set then [11:0] contains scaled size instead of aspect ratio.
-	output [12:0] VIDEO_ARX,
-	output [12:0] VIDEO_ARY,
-
-	output  [7:0] VGA_R,
-	output  [7:0] VGA_G,
-	output  [7:0] VGA_B,
-	output        VGA_HS,
-	output        VGA_VS,
-	output        VGA_DE,    // = ~(VBlank | HBlank)
-	output        VGA_F1,
-	output [1:0]  VGA_SL,
-	output        VGA_SCALER, // Force VGA scaler
-	output        VGA_DISABLE, // analog out is off
-
-	input  [11:0] HDMI_WIDTH,
-	input  [11:0] HDMI_HEIGHT,
-	output        HDMI_FREEZE,
-
-	output        LED_USER,  // 1 - ON, 0 - OFF.
-
-	// b[1]: 0 - LED status is system status OR'd with b[0]
-	//       1 - LED status is controled solely by b[0]
-	// hint: supply 2'b00 to let the system control the LED.
-	output  [1:0] LED_POWER,
-	output  [1:0] LED_DISK,
-
-	// I/O board button press simulation (active high)
-	// b[1]: user button
-	// b[0]: osd button
-	output  [1:0] BUTTONS,
-
-	input         CLK_AUDIO, // 24.576 MHz
-	output [15:0] AUDIO_L,
-	output [15:0] AUDIO_R,
-	output        AUDIO_S,   // 1 - signed audio samples, 0 - unsigned
-	output  [1:0] AUDIO_MIX, // 0 - no mix, 1 - 25%, 2 - 50%, 3 - 100% (mono)
-
-	//ADC
-	inout   [3:0] ADC_BUS,
-
-	//SD-SPI
-	output        SD_SCK,
-	output        SD_MOSI,
-	input         SD_MISO,
-	output        SD_CS,
-	input         SD_CD,
-
-	//High latency DDR3 RAM interface
-	//Use for non-critical time purposes
-	output        DDRAM_CLK,
-	input         DDRAM_BUSY,
-	output  [7:0] DDRAM_BURSTCNT,
-	output [28:0] DDRAM_ADDR,
-	input  [63:0] DDRAM_DOUT,
-	input         DDRAM_DOUT_READY,
-	output        DDRAM_RD,
-	output [63:0] DDRAM_DIN,
-	output  [7:0] DDRAM_BE,
-	output        DDRAM_WE,
-
-	//SDRAM interface with lower latency
-	output        SDRAM_CLK,
-	output        SDRAM_CKE,
-	output [12:0] SDRAM_A,
-	output  [1:0] SDRAM_BA,
-	inout  [15:0] SDRAM_DQ,
-	output        SDRAM_DQML,
-	output        SDRAM_DQMH,
-	output        SDRAM_nCS,
-	output        SDRAM_nCAS,
-	output        SDRAM_nRAS,
-	output        SDRAM_nWE,
-
-`ifdef MISTER_DUAL_SDRAM
-	//Secondary SDRAM
-	//Set all output SDRAM_* signals to Z ASAP if SDRAM2_EN is 0
-	input         SDRAM2_EN,
-	output        SDRAM2_CLK,
-	output [12:0] SDRAM2_A,
-	output  [1:0] SDRAM2_BA,
-	inout  [15:0] SDRAM2_DQ,
-	output        SDRAM2_nCS,
-	output        SDRAM2_nCAS,
-	output        SDRAM2_nRAS,
-	output        SDRAM2_nWE,
-`endif
-
-	input         UART_CTS,
-	output        UART_RTS,
-	input         UART_RXD,
-	output        UART_TXD,
-	output        UART_DTR,
-	input         UART_DSR,
-
-	input   [6:0] USER_IN,
-	output  [6:0] USER_OUT,
-
-	input         OSD_STATUS
+	`include "sys/emu_ports.vh"
 );
 
 ///////// Default values for ports not used in this core /////////
@@ -155,13 +39,15 @@ assign {DDRAM_CLK, DDRAM_BURSTCNT, DDRAM_ADDR, DDRAM_DIN, DDRAM_BE, DDRAM_RD, DD
 assign VGA_SCALER = 0;
 assign VGA_DISABLE = 0;
 assign HDMI_FREEZE = 0;
+assign HDMI_BLACKOUT = 0;
+assign HDMI_BOB_DEINT = 0;
 
 assign AUDIO_S = 0;
 assign AUDIO_L = 0;
 assign AUDIO_R = 0;
 assign AUDIO_MIX = 0;
 
-assign LED_DISK = 0;
+assign LED_DISK = {1'b1, save_busy | disk_busy}; // debug aid: lit during flush/track-load
 assign LED_POWER = 0;
 assign BUTTONS = 0;
 
@@ -176,6 +62,9 @@ localparam CONF_STR = {
 	"UK101;;",
 	"-;",
 	"D0F,TXTBASLOD,Load Ascii;",
+	"S0,TXT,Save Ascii;",
+	"R[11],Save;",
+	"S1,65D65U,Mount Disk;",
 	"O[3],Load programs from,File,UART;",
 	"O[7],Baud Rate,9600,300;",
 	"-;",
@@ -183,14 +72,21 @@ localparam CONF_STR = {
 	"O[13:12],Scandoubler Fx,None,HQ2x,CRT 25%,CRT 50%;",
 	"O[16:15],Scale,Normal,V-Integer,Narrower HV-Integer,Wider HV-Integer;",
 	//"O34,Colours,White on blue,White on black,Green on black,Yellow on black;",
-	"H4d5D6O4,Screen resolution,Low,High;",
+	// D6 dropped here (2026-07-21): it used to force-grey this row whenever
+	// C1P was selected (status_menumask bit6 = status[28], set only for
+	// C1P) - the only reason C1P had no selectable screen mode at all. C2P's
+	// own row below keeps D6 (vestigial - status[27]/status[28] can't both
+	// be set, so it never actually fires there, but left alone since it's
+	// provably inert).
+	"H4d5O4,Screen resolution,Low,High;",
 	"h4d5D6O56,Screen resolution,Low,High,Auto;",
 	"-;",
 	"O[28:27],Machine,UK101,OSI C2P,OSI C1P;",
 	"O[19:17],Clock speed,1Mhz,2Mhz,4Mhz,8Mhz,10Mhz;",
 	"O[26:24],Memory Size,4K,8K,32K,41K;",
-	"D6H4O[22:21],Monitor,Cegmon,MonUK02,Wemon;",
-	"h4O[23],Monitor,Cegmon,Synmon;",
+	"H4H6O[22:21],Monitor,Cegmon,MonUK02,Wemon;",
+	"h4O[23:22],Monitor,Cegmon,Synmon (Basic),Synmon (Disk);",
+	"h6O[23],Monitor,Cegmon,Synmon;",
 	"-;",
 	"-;",
 	"R[10],Reset;",
@@ -216,13 +112,70 @@ wire [1:0] machine_type=status[28:27];
 //assign resolution = status[5];
 wire forced_scandoubler;
 wire [21:0] gamma_bus;
-wire grey_res_menu = (monitor_type==2'b0 || (machine_type==1'b1 && monitor_type == 2'b1));
+// Preserves prior behaviour (always true for C2P, since the old 1-bit
+// Synmon selector's only two values were 0=Cegmon/1=Synmon, both already
+// covered) now that C2P's Synmon choice has split into two values (1=Basic,
+// 2=Disk) - both still count.
+// C1P (2026-07-21, Step 4f follow-up): unlike UK101, whose resolution switch
+// is tied to a Cegmon-only ROM patch table (so the menu is only meaningful
+// under that one monitor), C1P's 64x16 mode is a plain RTL video-timing
+// selection with no ROM-patch dependency on any monitor - it should stay
+// enabled for either C1P monitor choice. Without this, only C1P+Cegmon
+// enabled the row (via the monitor_type==0 clause below) and C1P+Synmon was
+// stuck permanently greyed - reported by the user immediately after Step 4f.
+wire grey_res_menu = (monitor_type==2'b0 || (machine_type==2'b01 && (monitor_type==2'b01 || monitor_type==2'b10)) || machine_type==2'b10);
 wire ioctl_download;
 wire ioctl_wr;
 wire [15:0] ioctl_addr;
 wire [7:0] ioctl_data;
 wire [7:0] ioctl_index;
 wire ioctl_wait;
+
+// SD-image mounts: slot 0 = save file (Phase 1), slot 1 = disk image (Phase 2)
+wire [7:0] save_data;
+wire save_strobe;
+wire [1:0] img_mounted;
+wire [63:0] img_size;
+wire [31:0] sd_lba[2];
+wire [5:0] sd_blk_cnt[2];
+wire [1:0] sd_rd;
+wire [1:0] sd_wr;
+wire [1:0] sd_ack;
+wire [8:0] sd_buff_addr;
+wire [7:0] sd_buff_dout;
+wire [7:0] sd_buff_din[2];
+wire sd_buff_wr;
+
+assign sd_rd[0] = 1'b0;      // save slot never reads
+assign sd_wr[1] = 1'b0;      // disk slot never writes (Step 2 is read-only)
+assign sd_blk_cnt[0] = 6'd0;
+assign sd_blk_cnt[1] = 6'd0;
+assign sd_buff_din[1] = 8'h00; // disk slot never sourced for a write
+wire save_busy;
+
+// Disk-track read (Phase 2, Step 2/3)
+wire [7:0] track_byte;
+wire track_byte_strobe;
+wire disk_busy;
+wire [6:0] track_number;
+wire track_changed;
+
+// Disk geometry auto-detect from the mounted image size (Phase 2, 8" support):
+//   92160 bytes = 5.25" (40 tracks x 2304), 295680 = 8" (77 tracks x 3840).
+// disk_reader.sv derives its own track byte-size from img_size; uk101.vhd only
+// needs the 1-bit select for the head-stepper's last-track clamp.
+//
+// LATCHED at the DISK slot's mount pulse (img_mounted[1]), NOT a bare
+// combinational compare on img_size: hps_io's img_size is shared across all
+// slots and reflects the *most recent* mount of ANY slot, so mounting a save
+// .txt (slot 0) after an 8" disk (slot 1) would otherwise wrongly flip this
+// back to 5.25" while the 8" disk is still in the drive. Latching here mirrors
+// how disk_reader.sv latches its own trksiz at the same pulse.
+reg disk_is_8inch = 1'b0;
+always @(posedge clk_sys) begin
+	if (img_mounted[1] && img_size != 0)
+		disk_is_8inch <= (img_size == 64'd295680);
+end
 
 
 
@@ -231,7 +184,10 @@ begin
 if (machine_type==2'b00 && (monitor_type==2'b01 || monitor_type == 2'b10))
 	resolution = 2'b00;
 else if (machine_type == 2'b10)
-	resolution = 2'b00;
+	// Was hardcoded 2'b00 (no selectable screen mode at all for C1P) - now a
+	// real Low/High choice, same status bit and same "O4" menu row UK101
+	// uses (see CONF_STR above). High selects the new 64x16 mode (Step 4f).
+	resolution = {1'b0,status[4]};
 else if (machine_type == 2'b01)
 	resolution = status[6:5];
 else
@@ -240,7 +196,7 @@ end
 
 
 
-hps_io #(.CONF_STR(CONF_STR),.PS2DIV(2000)) hps_io
+hps_io #(.CONF_STR(CONF_STR),.PS2DIV(2000),.VDNUM(2)) hps_io
 (
 	.clk_sys(clk_sys),
 	.HPS_BUS(HPS_BUS),
@@ -257,8 +213,67 @@ hps_io #(.CONF_STR(CONF_STR),.PS2DIV(2000)) hps_io
 	.ioctl_addr(ioctl_addr),
 	.ioctl_dout(ioctl_data),
 	.ioctl_index(ioctl_index),
-	.ioctl_wait(ioctl_wait)
+	.ioctl_wait(ioctl_wait),
 
+	.img_mounted(img_mounted),
+	.img_size(img_size),
+	.sd_lba(sd_lba),
+	.sd_blk_cnt(sd_blk_cnt),
+	.sd_rd(sd_rd),
+	.sd_wr(sd_wr),
+	.sd_ack(sd_ack),
+	.sd_buff_addr(sd_buff_addr),
+	.sd_buff_dout(sd_buff_dout),
+	.sd_buff_din(sd_buff_din),
+	.sd_buff_wr(sd_buff_wr)
+
+);
+
+save_writer save_writer
+(
+	.clk_sys(clk_sys),
+	.reset(reset),
+
+	.save_btn(status[11]),
+	.img_mounted(img_mounted[0]),
+	.img_size(img_size),
+
+	.save_data_raw(save_data),
+	.save_strobe_raw(save_strobe),
+
+	.sd_lba(sd_lba[0]),
+	.sd_wr(sd_wr[0]),
+	.sd_ack(sd_ack[0]),
+
+	.sd_buff_addr(sd_buff_addr),
+	.sd_buff_din(sd_buff_din[0]),
+
+	.busy(save_busy)
+);
+
+disk_reader disk_reader
+(
+	.clk_sys(clk_sys),
+	.reset(reset),
+
+	.img_mounted(img_mounted[1]),
+	.img_size(img_size),
+
+	.sd_lba(sd_lba[1]),
+	.sd_rd(sd_rd[1]),
+	.sd_ack(sd_ack[1]),
+
+	.sd_buff_addr(sd_buff_addr),
+	.sd_buff_dout(sd_buff_dout),
+	.sd_buff_wr(sd_buff_wr),
+
+	.track_byte_strobe_raw(track_byte_strobe),
+	.track_byte(track_byte),
+
+	.track_number_raw(track_number),
+	.track_changed_raw(track_changed),
+
+	.busy(disk_busy)
 );
 ///////////////////
 //  PLL - clocks are the most important part of a system
@@ -313,6 +328,10 @@ always_comb
 begin
 if (machine_type==0)
 	monitor_type=status[22:21];
+else if (machine_type==2'b01)
+	// OSI C2P: 3-way select (Cegmon/Synmon Basic/Synmon Disk) needs both
+	// status[23:22], unlike C1P's single-bit Cegmon/Synmon choice below.
+	monitor_type=status[23:22];
 	else
 	monitor_type={1'b0,status[23]};
 end
@@ -369,7 +388,15 @@ uk101 uk101
 	.ioctl_download(ioctl_download),
    .ioctl_data(ioctl_data),
    .ioctl_addr(ioctl_addr),
-	.ioctl_wr(ioctl_wr)
+	.ioctl_wr(ioctl_wr),
+	.save_data(save_data),
+	.save_strobe(save_strobe),
+	.track_byte(track_byte),
+	.track_byte_strobe(track_byte_strobe),
+	.track_number(track_number),
+	.track_changed(track_changed),
+	.disk_img_mounted(img_mounted[1]),
+	.disk_is_8inch(disk_is_8inch)
 );
 
 
